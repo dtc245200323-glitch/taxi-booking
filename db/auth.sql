@@ -157,3 +157,8 @@ ALTER TABLE trips ADD COLUMN IF NOT EXISTS promo_code VARCHAR(30);
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(12,0) NOT NULL DEFAULT 0;
 INSERT INTO promotions(code,title,kind,value,max_discount,min_fare,usage_limit,per_customer_limit,expires_at)
  VALUES ('WELCOME20','Chào bạn mới! Giảm 20% chuyến đi','percent',20,30000,20000,1000,1,now()+interval '30 days') ON CONFLICT DO NOTHING;
+
+ALTER TABLE drivers ADD COLUMN IF NOT EXISTS age INTEGER CHECK(age BETWEEN 18 AND 100);
+ALTER TABLE drivers ADD COLUMN IF NOT EXISTS gender VARCHAR(10) CHECK(gender IN ('male','female','other'));
+ALTER TABLE drivers ADD COLUMN IF NOT EXISTS hometown VARCHAR(150);
+ALTER TABLE drivers ADD COLUMN IF NOT EXISTS experience_years INTEGER CHECK(experience_years BETWEEN 0 AND 82);

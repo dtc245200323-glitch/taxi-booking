@@ -598,12 +598,31 @@ def profile():
     with db() as conn:
         if request.method=='PATCH':
             data=body()
-            if set(data)-{'name','phone','email'}:
+            allowed={'name','phone','email'}
+            if role=='driver':allowed.update({'age','gender','hometown','experience_years'})
+            if set(data)-allowed:
                 raise ValueError('fields')
             name,phone=field(data,'name',100),field(data,'phone',20)
             email=data.get('email','').strip()
             if email and (len(email)>254 or not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email)):
                 raise ValueError('email')
+            if role=='driver':
+                current=conn.execute('SELECT * FROM drivers WHERE id=%s FOR UPDATE',(profile_id,)).fetchone()
+                extra={key:data.get(key,current[key]) for key in ('age','gender','hometown','experience_years')}
+                for key,lower,upper in [('age',18,100),('experience_years',0,82)]:
+                    value=extra[key]
+                    if value is None or value=='':extra[key]=None
+                    else:
+                        if isinstance(value,bool) or not re.fullmatch(r'[0-9]+',str(value)):raise ValueError(key)
+                        extra[key]=int(value)
+                        if not lower<=extra[key]<=upper:raise ValueError(key)
+                if extra['gender'] not in (None,'','male','female','other'):raise ValueError('gender')
+                hometown=extra['hometown']
+                if hometown is not None and (not isinstance(hometown,str) or len(hometown)>150):raise ValueError('hometown')
+                if extra['age'] is not None and extra['experience_years'] is not None and extra['experience_years']>extra['age']-18:
+                    return jsonify(error='Kinh nghiệm lái xe không được vượt số năm tính từ tuổi 18'),400
+                conn.execute('UPDATE drivers SET age=%s,gender=%s,hometown=%s,experience_years=%s WHERE id=%s',
+                    (extra['age'],extra['gender'] or None,(hometown or '').strip() or None,extra['experience_years'],profile_id))
             conn.execute('UPDATE '+table+' SET name=%s,phone=%s,email=%s WHERE id=%s',(name,phone,email or None,profile_id))
             audit(conn,'update_profile',role,profile_id)
         row=conn.execute('SELECT * FROM '+table+' WHERE id=%s',(profile_id,)).fetchone()

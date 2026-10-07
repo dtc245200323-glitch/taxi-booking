@@ -2,13 +2,13 @@ const paymentLabels={awaiting_transfer:'Chưa chuyển khoản',pending:'Chờ x
 const paymentBadge=p=>`<span class="badge ${p.status==='success'?'completed':p.status==='failed'?'cancelled':'pending'}">${paymentLabels[p.status]}</span>`;
 const Extras=window.Extras={
   payments:[],seen:null,dialogTrip:null,uploading:false,
-  reset(){this.payments=[];this.seen=null;this.dialogTrip=null;$('#customer-payments').replaceChildren();$('#payment-admin-list').replaceChildren();$('#bank-settings-form').reset();$('#avatar-file').value='';$('#header-avatar').textContent='●';$('#profile-photo').src='/assets/driver.svg';$('.driver-profile .portrait img').src='/assets/driver.svg';},
+  reset(){this.payments=[];this.seen=null;this.dialogTrip=null;$('#customer-payments').replaceChildren();$('#payment-admin-list').replaceChildren();$('#bank-settings-form').reset();$('#avatar-file').value='';$('#header-avatar').textContent='●';$('#profile-photo').src='/assets/driver.svg';},
   async load(){
     const id=user?.id;if(!id)return;
     $('#avatar-editor').hidden=user.role!=='driver';
     if(user.role==='driver'){
       const url=profileData.avatar_url||'/assets/driver.svg';
-      $('.driver-profile .portrait img').src=url;$('.driver-profile .portrait img').alt='Ảnh đại diện tài xế';$('#profile-photo').src=url;
+      $('#profile-photo').src=url;
       $('#header-avatar').innerHTML=`<img src="${escape(url)}" alt="Ảnh đại diện">`;$('#remove-avatar').hidden=!profileData.avatar_url;return;
     }
     const role=user.role;
