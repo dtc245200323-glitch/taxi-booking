@@ -21,7 +21,7 @@ const TaxiMaps=window.TaxiMaps={
       if(!this.customerMap){this.customerMap=this.createMap('customer-map');this.customerLayer=L.layerGroup().addTo(this.customerMap);this.customerMap.on('click',e=>{if(this.mode!=='booking')return;this.setPoint(this.target,{lat:e.latlng.lat,lng:e.latlng.lng,label:(this.target==='pickup'?'Điểm đón':'Điểm đến')+' ('+e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5)+')'});});this.drawBooking();}
       this.customerMap.invalidateSize();
     }
-    if(user.role==='driver'&&['waiting','driver-home'].includes(currentPage)){
+    if(user.role==='driver'&&currentPage==='driver-home'){
       if(!this.driverMap){this.driverMap=this.createMap('driver-map');this.driverLayer=L.layerGroup().addTo(this.driverMap);if(this.driverTrip)run(()=>this.showDriverTrip(this.driverTrip,true));}
       this.driverMap.invalidateSize();
     }
@@ -90,7 +90,7 @@ const TaxiMaps=window.TaxiMaps={
       this.drawTrip(this.customerMap,this.customerLayer,t,true);$('#customer-map-mode').textContent='Đang theo dõi chuyến #TX'+id;
       $('#map-route-status').textContent=t.location_source==='map'?`${t.distance} km · ${t.driver_location?'Có vị trí GPS mới của tài xế':'Tài xế chưa chia sẻ GPS hoặc vị trí đã quá 2 phút.'}`:'Chuyến cũ chưa lưu tọa độ. Xem địa chỉ trong chi tiết chuyến.';
       $('#customer-map').scrollIntoView({behavior:'smooth',block:'center'});
-    }else if(user.role==='driver'){this.driverTrip=id;navigate('waiting');await this.init();$('#driver-map-trip').value=id;await this.showDriverTrip(id,true);$('#driver-map').scrollIntoView({behavior:'smooth',block:'center'});}
+    }else if(user.role==='driver'){this.driverTrip=id;navigate('driver-home');await this.init();$('#driver-map-trip').value=id;await this.showDriverTrip(id,true);$('#driver-map').scrollIntoView({behavior:'smooth',block:'center'});}
     else{await this.init();const t=await api('trips/'+id+'/map');Admin.open('Bản đồ chuyến #TX'+id,'<div id="dialog-trip-map" class="real-map"></div><p id="dialog-map-status"></p>',null);this.dialogMap=this.createMap('dialog-trip-map');this.drawTrip(this.dialogMap,L.layerGroup().addTo(this.dialogMap),t,true);$('#dialog-map-status').textContent=t.location_source==='map'?t.pickup+' → '+t.destination:'Chuyến chưa có tọa độ được lưu.';}
   },
   async customerTrips(active){
@@ -107,7 +107,7 @@ const TaxiMaps=window.TaxiMaps={
     if(active.length)this.driverTrip=active[0].id;else if(!this.driverRows.some(t=>t.id===this.driverTrip))this.driverTrip=this.driverRows[0]?.id||null;
     $('#driver-map-trip').innerHTML='<option value="">Chọn chuyến để xem bản đồ</option>'+this.driverRows.map(t=>`<option value="${t.id}">#TX${t.id} · ${escape(t.pickup)} → ${escape(t.destination)}</option>`).join('');$('#driver-map-trip').value=this.driverTrip||'';
     if(profileData?.status==='offline'&&this.watch!==null)await this.stopGps();
-    if(this.driverMap&&['waiting','driver-home'].includes(currentPage)){if(this.driverTrip)await this.showDriverTrip(this.driverTrip,old!==this.driverTrip);else{this.driverLayer.clearLayers();$('#driver-route-status').textContent='Chưa có chuyến để hiển thị.';}}
+    if(this.driverMap&&currentPage==='driver-home'){if(this.driverTrip)await this.showDriverTrip(this.driverTrip,old!==this.driverTrip);else{this.driverLayer.clearLayers();$('#driver-route-status').textContent='Chưa có chuyến để hiển thị.';}}
   },
   async showDriverTrip(id,fit=false){
     if(!id||!this.driverMap)return;const t=await api('trips/'+id+'/map');if(this.driverTrip!==Number(id))return;

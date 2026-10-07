@@ -20,3 +20,24 @@ button:focus-visible{outline:3px solid #2684ff;outline-offset:3px;}
 #avatar-editor{text-align:center;padding:24px 0;}#avatar-editor .profile-photo{display:block;margin:0 auto 20px;}#avatar-editor .row-actions{justify-content:center;}#driver-personal-fields{margin:18px 0;gap:16px;}
 
 .driver-layout{grid-template-columns:minmax(0,1fr);}
+
+/* Compact account cards, centered in the available content area. */
+#profile-panel{width:100%;max-width:480px;margin-inline:auto;}
+#profile-panel>.two-columns{grid-template-columns:minmax(0,1fr);align-items:start;gap:18px;}
+#profile-panel .panel{padding:18px;}
+#profile-panel h2{font-size:20px;margin-bottom:14px;}
+#profile-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+#profile-form>label{margin:0;}
+#profile-form>label:nth-of-type(3),#driver-personal-fields,#profile-driver-info,#avatar-editor,#profile-form>.primary{grid-column:1/-1;}
+#profile-panel input,#profile-panel select{padding:8px 10px;margin-top:5px;}
+#driver-personal-fields{margin:0;gap:12px;}
+#profile-driver-info .info-banner{margin:0;padding:10px;}
+#avatar-editor{padding:8px 0;}
+#avatar-editor .profile-photo{width:76px;height:76px;margin:0 auto 10px;}
+#avatar-editor .row-actions{gap:8px;flex-wrap:wrap;}
+#avatar-editor p{margin:8px 0 0;font-size:12px;}
+#profile-panel button{padding:9px 12px;}
+#profile-panel #password-form{gap:12px;}
+#vehicle-request-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+#vehicle-request-form>button{grid-column:1/-1;}
+@media(max-width:380px){#profile-form,#driver-personal-fields,#vehicle-request-form{grid-template-columns:minmax(0,1fr);}}
