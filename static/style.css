@@ -18,3 +18,5 @@ button:focus-visible{outline:3px solid #2684ff;outline-offset:3px;}
 .vehicle-choice{display:grid;gap:8px;}.vehicle-option{width:100%;}.vehicle-option+label{margin-left:0;}.vehicle-card .vehicle-title{font-size:13px;}.vehicle-title small{float:none;display:block;margin-top:4px;}
 
 #avatar-editor{text-align:center;padding:24px 0;}#avatar-editor .profile-photo{display:block;margin:0 auto 20px;}#avatar-editor .row-actions{justify-content:center;}#driver-personal-fields{margin:18px 0;gap:16px;}
+
+.driver-layout{grid-template-columns:minmax(0,1fr);}
