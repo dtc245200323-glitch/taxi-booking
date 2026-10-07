@@ -1,0 +1,203 @@
+{
+  "runtime_database_role": {
+    "name": "taxi_app",
+    "rolsuper": false,
+    "rolcreatedb": false,
+    "rolcreaterole": false,
+    "ddl_denied": true
+  },
+  "containers": [
+    {
+      "service": "app",
+      "user": "app",
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "privileged": false,
+      "ports": {},
+      "networks": [
+        "baikiemtra_backend",
+        "baikiemtra_edge",
+        "baikiemtra_monitoring"
+      ]
+    },
+    {
+      "service": "container-exporter",
+      "user": "",
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "privileged": false,
+      "ports": {},
+      "networks": [
+        "baikiemtra_monitoring"
+      ]
+    },
+    {
+      "service": "db",
+      "user": "",
+      "read_only": false,
+      "cap_drop": null,
+      "security_opt": null,
+      "privileged": false,
+      "ports": {},
+      "networks": [
+        "baikiemtra_backend"
+      ]
+    },
+    {
+      "service": "grafana",
+      "user": "472",
+      "read_only": false,
+      "cap_drop": null,
+      "security_opt": null,
+      "privileged": false,
+      "ports": {
+        "3000/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "3000"
+          }
+        ]
+      },
+      "networks": [
+        "baikiemtra_edge",
+        "baikiemtra_monitoring"
+      ]
+    },
+    {
+      "service": "loki",
+      "user": "10001",
+      "read_only": false,
+      "cap_drop": null,
+      "security_opt": null,
+      "privileged": false,
+      "ports": {},
+      "networks": [
+        "baikiemtra_monitoring"
+      ]
+    },
+    {
+      "service": "nginx",
+      "user": "",
+      "read_only": false,
+      "cap_drop": null,
+      "security_opt": null,
+      "privileged": false,
+      "ports": {
+        "80/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8080"
+          }
+        ]
+      },
+      "networks": [
+        "baikiemtra_backend",
+        "baikiemtra_edge",
+        "baikiemtra_monitoring"
+      ]
+    },
+    {
+      "service": "nginx-exporter",
+      "user": "1001:1001",
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "privileged": false,
+      "ports": {},
+      "networks": [
+        "baikiemtra_monitoring"
+      ]
+    },
+    {
+      "service": "pgadmin",
+      "user": "5050",
+      "read_only": false,
+      "cap_drop": null,
+      "security_opt": null,
+      "privileged": false,
+      "ports": {
+        "80/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "5050"
+          }
+        ]
+      },
+      "networks": [
+        "baikiemtra_backend",
+        "baikiemtra_edge"
+      ]
+    },
+    {
+      "service": "postgres-exporter",
+      "user": "nobody",
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "privileged": false,
+      "ports": {},
+      "networks": [
+        "baikiemtra_backend",
+        "baikiemtra_monitoring"
+      ]
+    },
+    {
+      "service": "prometheus",
+      "user": "nobody",
+      "read_only": false,
+      "cap_drop": null,
+      "security_opt": null,
+      "privileged": false,
+      "ports": {
+        "9090/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "9090"
+          }
+        ]
+      },
+      "networks": [
+        "baikiemtra_edge",
+        "baikiemtra_monitoring"
+      ]
+    },
+    {
+      "service": "promtail",
+      "user": "65534:65534",
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "privileged": false,
+      "ports": {},
+      "networks": [
+        "baikiemtra_monitoring"
+      ]
+    }
+  ],
+  "internal_networks": [
+    "baikiemtra_backend",
+    "baikiemtra_monitoring"
+  ]
+}

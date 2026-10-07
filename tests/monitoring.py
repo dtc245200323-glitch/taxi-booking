@@ -43,7 +43,7 @@ else:
 print('PASS: Prometheus scrape, Grafana dashboard/datasources, Loki logs, UI assets, pgAdmin and private metrics')
 
 from datetime import datetime,timezone
-queries=['{job="taxi-nginx"}', '{job="taxi-nginx"} |= "GET"', 'sum(count_over_time({job="taxi-nginx"}[5m]))']
+queries=['{job="taxi-nginx",collector="promtail"}', '{job="taxi-nginx",collector="promtail"} |= "GET"', 'sum(count_over_time({job="taxi-nginx",collector="promtail"}[5m]))']
 evidence={'checked_at':datetime.now(timezone.utc).isoformat(),'targets':get('http://127.0.0.1:9090/api/v1/targets')['data']['activeTargets'],'logql':[]}
 for q in queries:
     response=get('http://127.0.0.1:3000/api/datasources/proxy/uid/loki/loki/api/v1/query_range?'+urllib.parse.urlencode({'query':q,'limit':5}),True)

@@ -1,6 +1,6 @@
 # Đề 22 — Hệ thống Đặt xe / Taxi Booking
 
-Ứng dụng Taxi Booking với ba giao diện khách, tài xế và admin theo ảnh minh họa, Flask + PostgreSQL và Docker Compose. Có Nginx reverse proxy, pgAdmin, Prometheus, Grafana, Loki và Alloy thu thập log. GitHub Actions kiểm tra luồng nghiệp vụ khi push/PR. Xem [bảng đối chiếu chức năng theo tài liệu](docs/DOI_CHIEU_CHUC_NANG.md).
+Ứng dụng Taxi Booking với ba giao diện khách, tài xế và admin theo ảnh minh họa, Flask + PostgreSQL và Docker Compose. Có Nginx reverse proxy, pgAdmin, Prometheus, Grafana, Loki và Promtail thu thập log (Alloy là profile thay thế). GitHub Actions kiểm tra luồng nghiệp vụ khi push/PR. Xem [bảng đối chiếu chức năng theo tài liệu](docs/DOI_CHIEU_CHUC_NANG.md).
 
 ## Chạy trên Windows / Linux
 
@@ -30,7 +30,7 @@ Trong pgAdmin: Add New Server → tên `Taxi DB` → Connection: Host `db`, Port
 |---|---|---|---|
 | Admin | `admin` (hoặc `ADMIN_USERNAME`) | `ADMIN_PASSWORD` | Xem tất cả chuyến/thống kê, tạo khách và tài xế kèm tài khoản, đặt chuyến, phân công và cập nhật trạng thái |
 | Tài xế | `taixe` | `DRIVER_PASSWORD` | Bật/tắt nhận chuyến, xem hàng chờ đúng loại xe, nhận chuyến, báo đã đến/bắt đầu/hoàn thành; hồ sơ và thu nhập riêng |
-| Khách hàng | `khach` | `CUSTOMER_PASSWORD` | Đăng ký, đặt xe 4/7 chỗ, theo dõi/lịch sử riêng, hủy khi còn chờ nhận, hồ sơ, đánh giá và phản ánh |
+| Khách hàng | `khach` | `CUSTOMER_PASSWORD` | Đăng ký, đặt xe máy/4/7 chỗ, theo dõi/lịch sử riêng, hủy khi còn chờ nhận, hồ sơ, đánh giá và phản ánh |
 
 Giao diện và menu tự đổi theo tài khoản. Backend kiểm tra vai trò và chủ sở hữu. Tài xế chỉ xem hàng chờ với địa chỉ/tên khách/giá, chưa được lấy liên hệ khách trước khi nhận; lịch sử và chi tiết giới hạn theo chủ sở hữu. Khách/tài xế không được lấy danh sách quản trị hoặc phân công người khác.
 
@@ -74,14 +74,14 @@ Các chức năng sửa hồ sơ, tài khoản, báo cáo, export và audit đ�
 6. Thử phân công tài xế đang bận để thấy hệ thống ngăn nhận hai chuyến.
 7. Mở Grafana → Dashboards → Taxi Booking → Taxi Booking — Operations. Sau khoảng 30 giây và vài yêu cầu, có biểu đồ request, latency và log Nginx.
 
-Cước mặc định: **xe 4 chỗ = 15.000 + 12.000 × km**, **xe 7 chỗ = 20.000 + 15.000 × km**. Admin sửa biểu giá trong Cài đặt; giá mới chỉ áp dụng cho chuyến đặt sau đó. Khách chọn vị trí trên bản đồ OpenStreetMap; OSRM tính quãng đường ô tô, máy chủ lưu tuyến và tính giá. Chuyến cũ/admin đặt thủ công giữ dữ liệu lịch sử. Hỗ trợ tiền mặt và chuyển khoản QR tạo cục bộ, admin đối soát thành công/thất bại.
+Cước mặc định: **xe máy = 10.000 + 5.000 × km**, **xe 4 chỗ = 15.000 + 12.000 × km**, **xe 7 chỗ = 20.000 + 15.000 × km**. Admin sửa biểu giá trong Cài đặt; giá mới chỉ áp dụng cho chuyến đặt sau đó. Khách chọn vị trí trên bản đồ OpenStreetMap; OSRM tính quãng đường ô tô, máy chủ lưu tuyến và tính giá. Chuyến cũ/admin đặt thủ công giữ dữ liệu lịch sử. Hỗ trợ tiền mặt và chuyển khoản QR tạo cục bộ, admin đối soát thành công/thất bại.
 
 ## Cấu trúc và kiến trúc
 
 ```text
 Browser → Nginx :8080 → Flask :8000 → PostgreSQL :5432
                        ↑ Prometheus → Grafana
-Nginx log files → Alloy → Loki → Grafana
+Nginx log files → Promtail → Loki → Grafana
 pgAdmin → PostgreSQL
 ```
 
@@ -196,3 +196,47 @@ Chưa tự tạo/push repository vì dự án chưa có URL repository đích.
 Đã tích hợp Leaflet + OpenStreetMap, tìm địa điểm Photon, tuyến ô tô OSRM, giá theo quãng đường máy chủ và GPS tài xế chia sẻ tự nguyện. Xem [hướng dẫn và giới hạn dịch vụ demo](docs/BAN_DO_THUC_TE.md).
 
 Xe máy và ưu đãi: [hướng dẫn](docs/XE_MAY_VA_UU_DAI.md).
+
+
+## Đối chiếu yêu cầu học phần và demo
+
+Xem [hướng dẫn nộp bài/demo](docs/NOP_BAI_VA_DEMO.md), [báo cáo Word](docs/BAO_CAO_TAXI_BOOKING.docx), [báo cáo PDF](docs/BAO_CAO_TAXI_BOOKING.pdf) và [bản Markdown](docs/BAO_CAO.md).
+
+- Nginx có security headers và rate limit; nhánh HTTP + security headers đáp ứng lựa chọn trong đề, chưa có HTTPS.
+- Prometheus có năm job: API, Prometheus, Nginx exporter, PostgreSQL exporter và Docker Engine container exporter. Grafana có 11 panel, được provision tự động.
+- Loki + Promtail chạy mặc định; label collector="promtail" xác định log mới. Promtail EOL, giữ Alloy trong profile thay thế; không chạy hai collector cùng lúc.
+- App non-root/read-only/cap_drop/no-new-privileges; mạng DB và monitoring internal; DB không map port; runtime taxi_app chỉ DML; migrate chạy riêng một lần, không gửi secret quản trị DB cho app.
+- Container-exporter là ngoại lệ đọc Docker socket, không privileged và không mở port host. Socket :ro không bảo đảm API read-only; cần kiểm soát kỹ nếu triển khai production.
+- Mật khẩu admin/tài xế demo còn theo yêu cầu trước; đổi thành mật khẩu mạnh trước triển khai public. Secret hạ tầng không nằm trong Git.
+
+```powershell
+python tests/monitoring.py
+python tests/hardening.py
+```
+
+Trong Grafana Explore chọn Loki và chạy:
+
+```logql
+{job="taxi-nginx",collector="promtail"}
+{job="taxi-nginx",collector="promtail"} |= "GET"
+sum(count_over_time({job="taxi-nginx",collector="promtail"}[5m]))
+```
+
+Đổi collector (không chạy đồng thời):
+
+```powershell
+docker compose stop promtail
+docker compose --profile alloy up -d alloy
+# Quay lại yêu cầu đề:
+docker compose stop alloy
+docker compose up -d promtail
+```
+
+Điền thông tin thật vào `docs/student.json`, rồi tạo lại báo cáo:
+
+```powershell
+python -m pip install python-docx reportlab
+python docs/build_report.py
+```
+
+Bản PDF/Word hiện để placeholder cho thông tin sinh viên và repo GitHub; chưa push khi chưa được cung cấp URL/xác thực. Tài khoản/repo phải đặt tên theo MSSV theo yêu cầu giảng viên.

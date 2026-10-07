@@ -1,3 +1,4 @@
+name: ${COMPOSE_PROJECT_NAME:-baikiemtra}
 services:
   db:
     image: postgres:16-alpine
@@ -87,7 +88,9 @@ services:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?Set PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?Set PGADMIN_PASSWORD}
     ports: ['127.0.0.1:5050:80']
-    volumes: [pgadmin_data:/var/lib/pgadmin]
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./infra/pgadmin-servers.json:/pgadmin4/servers.json:ro
     depends_on: [db]
     restart: unless-stopped
     networks: [edge, backend]
@@ -120,6 +123,7 @@ services:
     restart: unless-stopped
     networks: [monitoring]
   alloy:
+    profiles: [alloy]
     image: grafana/alloy:v1.10.2
     command: [run, /etc/alloy/config.alloy, '--storage.path=/var/lib/alloy/data']
     volumes:
@@ -162,6 +166,20 @@ services:
     restart: unless-stopped
     networks: [monitoring]
 
+  promtail:
+    image: grafana/promtail:3.5.3
+    command: ['-config.file=/etc/promtail/config.yml']
+    user: '65534:65534'
+    volumes:
+      - ./infra/promtail.yml:/etc/promtail/config.yml:ro
+      - nginx_logs:/var/log/nginx:ro
+    read_only: true
+    tmpfs: ['/tmp:uid=65534,gid=65534,mode=1770']
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on: [loki, nginx]
+    restart: unless-stopped
+    networks: [monitoring]
 networks:
   edge:
   backend:

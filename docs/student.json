@@ -1,0 +1,9 @@
+{
+  "school": "[TÊN TRƯỜNG]",
+  "faculty": "[KHOA / BỘ MÔN]",
+  "name": "[HỌ VÀ TÊN SINH VIÊN]",
+  "student_id": "[MÃ SỐ SINH VIÊN]",
+  "class": "[LỚP]",
+  "teacher": "[GIẢNG VIÊN HƯỚNG DẪN]",
+  "repository": "[LINK REPOSITORY GITHUB]"
+}
