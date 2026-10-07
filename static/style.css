@@ -62,3 +62,5 @@ button:focus-visible{outline:3px solid #2684ff;outline-offset:3px;}
  :is(#profile-panel,#password-page,#vehicle-request-page) h2{font-size:22px;}
  #profile-form,#driver-personal-fields,#vehicle-request-form{gap:14px;}
 }
+
+.profile-shortcuts{display:grid;gap:12px;margin-top:14px;}.profile-shortcuts button{width:100%;justify-content:space-between;}.account-back{margin-bottom:16px;}
