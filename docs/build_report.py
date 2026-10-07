@@ -155,7 +155,7 @@ footer=sec.footer.paragraphs[0];footer.alignment=WD_ALIGN_PARAGRAPH.CENTER;field
 pdfmetrics.registerFont(TTFont('TimesVN','C:/Windows/Fonts/times.ttf'));pdfmetrics.registerFont(TTFont('TimesVNBold','C:/Windows/Fonts/timesbd.ttf'))
 styles=getSampleStyleSheet();styles.add(ParagraphStyle(name='VN',fontName='TimesVN',fontSize=12,leading=16,alignment=TA_JUSTIFY,spaceAfter=9));styles.add(ParagraphStyle(name='VNTitle',fontName='TimesVNBold',fontSize=17,leading=22,spaceAfter=15));styles.add(ParagraphStyle(name='VNCover',fontName='TimesVNBold',fontSize=17,leading=25,alignment=TA_CENTER,spaceAfter=20))
 story=[]
-cover=[student['school'],student['faculty'],'BÁO CÁO THỰC HÀNH','MÔN: TRIỂN KHAI VÀ QUẢN TRỊ HỆ THỐNG PHẦN MỀM','ĐỀ 22: HỆ THỐNG ĐẶT XE / TAXI BOOKING','Sinh viên: '+student['name'],'Mã số sinh viên: '+student['student_id'],'Lớp: '+student['class'],'Giảng viên: '+student['teacher'],'Tháng 10 năm 2026']
+cover=[student['school'],student['faculty'],'BÁO CÁO THỰC HÀNH','MÔN: TRIỂN KHAI VÀ QUẢN TRỊ HỆ THỐNG PHẦN MỀM','ĐỀ 22: HỆ THỐNG ĐẶT XE / TAXI BOOKING','Sinh viên: '+student['name'],'Mã số sinh viên: '+student['student_id'],'Lớp: '+student['class'],'Giảng viên giảng dạy: '+student['teacher'],'Tháng 10 năm 2026']
 for line in cover:
     para=doc.add_paragraph(line);para.alignment=WD_ALIGN_PARAGRAPH.CENTER;para.paragraph_format.space_after=Pt(22)
     if line in cover[:5]:

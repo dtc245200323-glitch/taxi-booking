@@ -1,9 +1,9 @@
 {
   "school": "[TÊN TRƯỜNG]",
   "faculty": "[KHOA / BỘ MÔN]",
-  "name": "[HỌ VÀ TÊN SINH VIÊN]",
-  "student_id": "[MÃ SỐ SINH VIÊN]",
+  "name": "Lý Minh Phương",
+  "student_id": "Dtc245200323",
   "class": "[LỚP]",
-  "teacher": "[GIẢNG VIÊN HƯỚNG DẪN]",
+  "teacher": "Nguyễn Anh Chuyên",
   "repository": "[LINK REPOSITORY GITHUB]"
 }
