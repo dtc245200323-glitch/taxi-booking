@@ -242,3 +242,9 @@ python docs/build_report.py
 Bản PDF/Word hiện để placeholder cho thông tin sinh viên và repo GitHub; chưa push khi chưa được cung cấp URL/xác thực. Tài khoản/repo phải đặt tên theo MSSV theo yêu cầu giảng viên.
 
 Trang chủ mới: menu xanh, ảnh taxi, đăng ký/khôi phục mật khẩu, ưu đãi công khai và thẻ dịch vụ. Đăng nhập bằng username hoặc SĐT/email đã lưu (alias trùng tài khoản bị từ chối). Ghi nhớ đăng nhập giữ phiên 30 ngày; không chọn thì cookie theo phiên trình duyệt và hết hạn server sau 24 giờ. Ưu đãi lấy từ mã còn hiệu lực; chọn dịch vụ/mã trước đăng nhập được chuyển vào form đặt xe. Ảnh minh họa mới trong static/assets/taxi-hero.png và taxi-services.png.
+
+
+### Trang đăng nhập và chatbot hỗ trợ
+Trang chủ không chứa biểu mẫu đăng nhập. Truy cập `/#login` hoặc `/#register` để mở trang riêng; hỗ trợ quên mật khẩu vẫn hoạt động. Nút tin nhắn góc dưới mở khung trò chuyện ở cả trang công khai và sau đăng nhập.
+
+Chat hỗ trợ đặt xe, các loại phương tiện/dịch vụ và xử lý lỗi. Để bật AI, điền `OPENAI_API_KEY` vào `.env` (không đưa khóa vào Git hoặc JavaScript), tùy chọn `OPENAI_MODEL` rồi chạy `docker-compose up -d --build app` và `docker-compose restart nginx`. Tích hợp phía máy chủ theo [OpenAI Responses API](https://developers.openai.com/api/docs/guides/text), gửi tối đa 8 tin gần nhất, `store=false`, timeout 20 giây và giới hạn 30 yêu cầu/phút trên tiến trình. Không tự gửi hồ sơ, chuyến đi hoặc cookie đến AI. Tin nhắn do người dùng nhập được gửi đến nhà cung cấp khi AI bật. Chat chỉ tư vấn, không thực hiện đặt xe hoặc xác nhận thanh toán. Chưa có khóa hoặc AI lỗi thì hiển thị rõ **Hướng dẫn cơ bản**, không giả lập AI.

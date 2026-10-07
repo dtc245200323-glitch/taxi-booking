@@ -5,6 +5,7 @@ RUN pip install --no-cache-dir -r requirements.txt && useradd -m app
 COPY requirements-qr.txt .
 RUN pip install --no-cache-dir --timeout 20 --retries 2 --progress-bar off -r requirements-qr.txt
 COPY app.py .
+COPY chat.py .
 COPY media_payments.py .
 COPY maps.py .
 COPY promotions.py .

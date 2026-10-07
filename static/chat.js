@@ -1,0 +1,11 @@
+const TaxiChat=window.TaxiChat={
+ history:[],busy:false,
+ open(){$('#chat-panel').hidden=false;if(!$('#chat-messages').children.length)this.add('assistant','Xin chào! Mình hỗ trợ đặt xe, chọn dịch vụ và xử lý lỗi. Bạn cần giúp gì?');$('#chat-form input').focus();},
+ add(role,text){const p=document.createElement('p');p.className='chat-message '+role;p.textContent=text;$('#chat-messages').append(p);while($('#chat-messages').children.length>30)$('#chat-messages').firstChild.remove();$('#chat-messages').scrollTop=$('#chat-messages').scrollHeight;return p;},
+ async send(text){text=text.trim();if(this.busy||!text)return;this.busy=true;$('#chat-form button').disabled=true;this.add('user',text);$('#chat-form').reset();const pending=this.add('assistant','Đang trả lời…');const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),25000);try{const response=await fetch('/api/public/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history:this.history.slice(-8)}),signal:controller.signal});const result=await response.json();if(!response.ok)throw new Error(result.error||'Không gửi được tin nhắn');pending.textContent=result.answer;$('#chat-mode').textContent=result.mode==='ai'?'AI tư vấn · Taxi Booking':'Hướng dẫn cơ bản · AI chưa khả dụng';this.history.push({role:'user',content:text},{role:'assistant',content:result.answer});this.history=this.history.slice(-8);}catch(e){pending.textContent=e.name==='AbortError'?'Phản hồi quá lâu. Bạn thử gửi lại nhé.':e.message;}finally{clearTimeout(timer);this.busy=false;$('#chat-form button').disabled=false;$('#chat-messages').scrollTop=$('#chat-messages').scrollHeight;}},
+ reset(){this.history=[];$('#chat-messages').replaceChildren();$('#chat-panel').hidden=true;}
+};
+document.addEventListener('click',e=>{if(e.target.closest('[data-chat-open]'))TaxiChat.open();const q=e.target.closest('[data-chat-question]');if(q)TaxiChat.send(q.dataset.chatQuestion);});
+$('#chat-close').onclick=()=>$('#chat-panel').hidden=true;
+$('#chat-form').onsubmit=e=>{e.preventDefault();TaxiChat.send(e.target.message.value);};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#chat-panel').hidden=true;});

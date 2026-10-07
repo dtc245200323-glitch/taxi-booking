@@ -33,7 +33,7 @@ def db():
 @app.before_request
 def before():
     request.started = time.monotonic()
-    public = {'/api/health', '/api/auth/login', '/api/auth/register','/api/auth/forgot','/api/auth/reset','/api/public/promotions'}
+    public = {'/api/health', '/api/auth/login', '/api/auth/register','/api/auth/forgot','/api/auth/reset','/api/public/promotions','/api/public/chat'}
     if request.path.startswith('/api/') and request.path not in public:
         token = request.cookies.get('taxi_session', '')
         with db() as conn:
@@ -957,3 +957,6 @@ register_maps(app, db, roles, scope, body, field, audit)
 
 from promotions import register_promotions, discount
 register_promotions(app,db,roles,body,audit)
+
+from chat import register_chat
+register_chat(app)
