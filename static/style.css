@@ -41,3 +41,5 @@ button:focus-visible{outline:3px solid #2684ff;outline-offset:3px;}
 #vehicle-request-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
 #vehicle-request-form>button{grid-column:1/-1;}
 @media(max-width:380px){#profile-form,#driver-personal-fields,#vehicle-request-form{grid-template-columns:minmax(0,1fr);}}
+
+#password-page,#vehicle-request-page,#my-complaints-page{width:100%;max-width:480px;margin-inline:auto;}#profile-form>button{grid-column:1/-1;}#profile-form input:disabled,#profile-form select:disabled{opacity:1;color:#17233a;background:#f4f7fb;cursor:default;}
