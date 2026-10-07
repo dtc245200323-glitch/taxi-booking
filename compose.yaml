@@ -15,10 +15,30 @@ services:
       retries: 15
     restart: unless-stopped
     networks: [backend]
-  app:
+  migrate:
     build: .
+    command: [python, migrate.py]
     environment:
       DATABASE_URL: 'postgresql://taxi:${POSTGRES_PASSWORD}@db:5432/taxi'
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Set APP_DB_PASSWORD}
+      MONITOR_DB_PASSWORD: ${MONITOR_DB_PASSWORD:?Set MONITOR_DB_PASSWORD}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
+      DRIVER_PASSWORD: ${DRIVER_PASSWORD:?Set DRIVER_PASSWORD}
+      CUSTOMER_PASSWORD: ${CUSTOMER_PASSWORD:?Set CUSTOMER_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [backend]
+  app:
+    build: .
+    command: [gunicorn, '--bind', '0.0.0.0:8000', '--workers', '1', '--threads', '4', '--access-logfile', '-', 'app:app']
+    environment:
+      DATABASE_URL: 'postgresql://taxi_app:${APP_DB_PASSWORD:?Set APP_DB_PASSWORD}@db:5432/taxi'
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
       DRIVER_PASSWORD: ${DRIVER_PASSWORD:?Set DRIVER_PASSWORD}
@@ -37,8 +57,8 @@ services:
       MAP_TILE_URL: ${MAP_TILE_URL:-}
       MAP_USER_AGENT: ${MAP_USER_AGENT:-TaxiBookingStudentProject/1.0 (+http://127.0.0.1:8080)}
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
@@ -49,7 +69,7 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    networks: [backend]
+    networks: [edge, backend, monitoring]
   nginx:
     image: nginx:1.28-alpine
     ports: ['127.0.0.1:8080:80']
@@ -60,7 +80,7 @@ services:
       app:
         condition: service_healthy
     restart: unless-stopped
-    networks: [backend]
+    networks: [edge, backend, monitoring]
   pgadmin:
     image: dpage/pgadmin4:9.8
     environment:
@@ -70,7 +90,7 @@ services:
     volumes: [pgadmin_data:/var/lib/pgadmin]
     depends_on: [db]
     restart: unless-stopped
-    networks: [backend]
+    networks: [edge, backend]
   prometheus:
     image: prom/prometheus:v3.5.0
     volumes:
@@ -78,7 +98,7 @@ services:
       - prometheus_data:/prometheus
     ports: ['127.0.0.1:9090:9090']
     restart: unless-stopped
-    networks: [backend]
+    networks: [edge, monitoring]
   grafana:
     image: grafana/grafana:12.1.1
     environment:
@@ -90,7 +110,7 @@ services:
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports: ['127.0.0.1:3000:3000']
     restart: unless-stopped
-    networks: [backend]
+    networks: [edge, monitoring]
   loki:
     image: grafana/loki:3.5.3
     command: [-config.file=/etc/loki/config.yaml]
@@ -98,7 +118,7 @@ services:
       - ./infra/loki.yaml:/etc/loki/config.yaml:ro
       - loki_data:/loki
     restart: unless-stopped
-    networks: [backend]
+    networks: [monitoring]
   alloy:
     image: grafana/alloy:v1.10.2
     command: [run, /etc/alloy/config.alloy, '--storage.path=/var/lib/alloy/data']
@@ -108,9 +128,46 @@ services:
       - alloy_data:/var/lib/alloy/data
     depends_on: [loki, nginx]
     restart: unless-stopped
-    networks: [backend]
+    networks: [monitoring]
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.4.2
+    command: ['--nginx.scrape-uri=http://nginx:8081/stub_status']
+    depends_on: [nginx]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    networks: [monitoring]
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.17.1
+    environment:
+      DATA_SOURCE_NAME: 'postgresql://taxi_monitor:${MONITOR_DB_PASSWORD:?Set MONITOR_DB_PASSWORD}@db:5432/taxi?sslmode=disable'
+    depends_on:
+      app:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    networks: [backend, monitoring]
+  container-exporter:
+    build: ./infra/container-exporter
+    environment:
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-baikiemtra}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    networks: [monitoring]
+
 networks:
+  edge:
   backend:
+    internal: true
+  monitoring:
+    internal: true
 volumes:
   postgres_data:
   pgadmin_data:

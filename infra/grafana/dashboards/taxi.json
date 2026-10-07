@@ -1,10 +1,252 @@
 {
-  "uid": "taxi-overview", "title": "Taxi Booking — Operations", "schemaVersion": 40,
-  "version": 1, "refresh": "15s", "time": {"from": "now-1h", "to": "now"},
+  "uid": "taxi-overview",
+  "title": "Taxi Booking — Operations",
+  "schemaVersion": 40,
+  "version": 2,
+  "refresh": "15s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "panels": [
-    {"id": 1, "title": "API healthy", "type": "stat", "gridPos": {"x": 0, "y": 0, "w": 6, "h": 5}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "up{job=\"taxi-api\"}", "refId": "A"}]},
-    {"id": 2, "title": "Requests / second", "type": "timeseries", "gridPos": {"x": 6, "y": 0, "w": 18, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "sum(rate(taxi_http_requests_total[5m])) by (status)", "legendFormat": "{{status}}", "refId": "A"}]},
-    {"id": 3, "title": "Latency p95 (seconds)", "type": "timeseries", "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "prometheus"}, "targets": [{"expr": "histogram_quantile(0.95, sum(rate(taxi_http_request_duration_seconds_bucket[5m])) by (le))", "refId": "A"}]},
-    {"id": 4, "title": "Nginx logs", "type": "logs", "gridPos": {"x": 12, "y": 8, "w": 12, "h": 10}, "datasource": {"type": "loki", "uid": "loki"}, "targets": [{"expr": "{job=\"taxi-nginx\"}", "refId": "A"}]}
+    {
+      "id": 1,
+      "title": "API healthy",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"taxi-api\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Requests / second",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 18,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(taxi_http_requests_total[5m])) by (status)",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Latency p95 (seconds)",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(taxi_http_request_duration_seconds_bucket[5m])) by (le))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Nginx logs",
+      "type": "logs",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 10
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "{job=\"taxi-nginx\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "NGINX health",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "nginx_up",
+          "refId": "A",
+          "legendFormat": "{{service}}{{job}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "PostgreSQL health",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pg_up",
+          "refId": "A",
+          "legendFormat": "{{service}}{{job}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Scrape targets",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "up",
+          "refId": "A",
+          "legendFormat": "{{service}}{{job}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Container memory (bytes)",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "container_memory_working_set_bytes{service!=\"\"}",
+          "refId": "A",
+          "legendFormat": "{{service}}{{job}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Container CPU cores",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{service!=\"\"}[5m])",
+          "refId": "A",
+          "legendFormat": "{{service}}{{job}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Database connections",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 36,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pg_stat_database_numbackends{datname=\"taxi\"}",
+          "refId": "A",
+          "legendFormat": "{{service}}{{job}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "NGINX requests per second",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(nginx_http_requests_total[5m])",
+          "refId": "A",
+          "legendFormat": "{{service}}{{job}}"
+        }
+      ]
+    }
   ]
 }
