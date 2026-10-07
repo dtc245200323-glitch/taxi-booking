@@ -1,0 +1,18 @@
+@import url('/base.css');
+button{transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease;}
+button:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 5px 14px #142d4220;}
+button:not(:disabled):active{transform:scale(.97);}
+button:focus-visible{outline:3px solid #2684ff;outline-offset:3px;}
+.button-click{animation:button-pulse .35s ease;}
+@keyframes button-pulse{50%{transform:scale(.95);box-shadow:0 0 0 5px #ffc62935;}}
+.promotion-banner{padding:16px;margin:0 0 18px;border-radius:14px;background:linear-gradient(120deg,#fff5c5,#ffe08a);border:1px solid #ffd052;color:#172e42;}
+.promotion-banner article+article{border-top:1px solid #d6b456;padding-top:12px;margin-top:12px;}
+.promotion-banner p{font-size:13px;margin:7px 0;}
+.vehicle-choice{grid-template-columns:repeat(3,minmax(0,1fr));}
+.vehicle-card{min-width:0;padding:10px;}
+.vehicle-card img{width:100%;object-fit:contain;}
+#promo-status{color:#22503a;font-size:14px;}
+@media(max-width:450px){.vehicle-title{font-size:13px;}.vehicle-card>small{font-size:11px;}}
+@media(prefers-reduced-motion:reduce){button{transition:none!important;}.button-click{animation:none!important;}}
+
+.vehicle-choice{display:grid;gap:8px;}.vehicle-option{width:100%;}.vehicle-option+label{margin-left:0;}.vehicle-card .vehicle-title{font-size:13px;}.vehicle-title small{float:none;display:block;margin-top:4px;}

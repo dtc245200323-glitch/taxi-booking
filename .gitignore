@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+*.dump
+.docker-local/
+.tools/
+.env.*
+!.env.example

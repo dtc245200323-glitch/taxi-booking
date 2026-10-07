@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: Taxi
+    folder: Taxi Booking
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

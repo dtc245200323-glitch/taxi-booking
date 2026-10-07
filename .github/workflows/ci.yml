@@ -1,0 +1,34 @@
+name: Taxi CI
+on: [push, pull_request]
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m py_compile app.py media_payments.py migrate.py tests/client.py tests/smoke.py tests/admin.py tests/features.py tests/password_reset.py tests/payment_media.py
+      - run: cp .env.example .env
+      - run: docker compose config --quiet
+      - run: docker compose up -d --build db app nginx
+      - run: python tests/smoke.py
+        env:
+          ADMIN_PASSWORD: replace-with-a-long-admin-password
+      - run: python tests/admin.py
+        env:
+          ADMIN_PASSWORD: replace-with-a-long-admin-password
+      - run: python tests/features.py
+        env:
+          ADMIN_PASSWORD: replace-with-a-long-admin-password
+      - run: docker compose exec -T app python - < tests/password_reset.py
+      - run: docker compose exec -T app python - < tests/qr_payload.py
+      - run: docker compose exec -T app python - < tests/map_features.py
+      - run: docker compose exec -T app python - < tests/promotions.py
+      - run: python tests/payment_media.py
+        env:
+          ADMIN_PASSWORD: replace-with-a-long-admin-password
+      - if: failure()
+        run: docker compose logs --tail=100
+      - if: always()
+        run: docker compose down
