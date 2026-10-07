@@ -22,6 +22,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.pagesizes import A4
 from PIL import Image as PILImage,ImageDraw,ImageFont
 
+REPORT_STEM='BAO_CAO_TAXI_BOOKING'+('_'+sys.argv[1] if len(sys.argv)>1 else '')
 ROOT=Path('docs');student=json.loads((ROOT/'student.json').read_text(encoding='utf-8'))
 evidence=json.loads((ROOT/'evidence/monitoring.json').read_text(encoding='utf-8'))
 hardening=json.loads((ROOT/'evidence/hardening.json').read_text(encoding='utf-8'))
@@ -176,11 +177,11 @@ for idx,(title,paragraphs,figure) in enumerate(sections):
         p=doc.add_paragraph(cap);p.alignment=WD_ALIGN_PARAGRAPH.CENTER
         story.extend([Spacer(1,5),Image(str(path),width=pdfwidth,height=pdfheight),Paragraph(escape(cap),styles['VN'])]);markdown.append('!['+cap+'](screenshots/'+figure+')\n')
     if idx<len(sections)-1:doc.add_page_break();story.append(PageBreak())
-doc.save(ROOT/'BAO_CAO_TAXI_BOOKING.docx')
+doc.save(ROOT/(REPORT_STEM+'.docx'))
 page_count=[]
 def footer_pdf(canvas,document):
     page_count.append(document.page);canvas.setFont('TimesVN',10);canvas.drawCentredString(A4[0]/2,24,str(document.page))
-SimpleDocTemplate(str(ROOT/'BAO_CAO_TAXI_BOOKING.pdf'),pagesize=A4,leftMargin=85,rightMargin=57,topMargin=50,bottomMargin=45).build(story,onFirstPage=footer_pdf,onLaterPages=footer_pdf)
+SimpleDocTemplate(str(ROOT/(REPORT_STEM+'.pdf')),pagesize=A4,leftMargin=85,rightMargin=57,topMargin=50,bottomMargin=45).build(story,onFirstPage=footer_pdf,onLaterPages=footer_pdf)
 assert max(page_count)>=10
 (ROOT/'BAO_CAO.md').write_text('\n'.join(markdown),encoding='utf-8')
 print('Report generated:',max(page_count),'PDF pages; DOCX and Markdown saved. Student/GitHub placeholders remain until supplied.')
