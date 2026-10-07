@@ -43,3 +43,22 @@ button:focus-visible{outline:3px solid #2684ff;outline-offset:3px;}
 @media(max-width:380px){#profile-form,#driver-personal-fields,#vehicle-request-form{grid-template-columns:minmax(0,1fr);}}
 
 #password-page,#vehicle-request-page,#my-complaints-page{width:100%;max-width:480px;margin-inline:auto;}#profile-form>button{grid-column:1/-1;}#profile-form input:disabled,#profile-form select:disabled{opacity:1;color:#17233a;background:#f4f7fb;cursor:default;}
+
+/* Comfortable sizing for the three separate account pages. */
+#profile-panel,#password-page,#vehicle-request-page{max-width:680px;}
+:is(#profile-panel,#password-page,#vehicle-request-page) .panel{padding:28px;}
+:is(#profile-panel,#password-page,#vehicle-request-page) h2{font-size:24px;margin-bottom:22px;}
+:is(#profile-panel,#password-page,#vehicle-request-page) label{font-size:15px;}
+:is(#profile-panel,#password-page,#vehicle-request-page) input,
+:is(#profile-panel,#password-page,#vehicle-request-page) select{font-size:15px;min-height:46px;padding:11px 13px;margin-top:7px;}
+#profile-form,#driver-personal-fields,#vehicle-request-form{gap:18px;}
+#password-form{gap:18px;}
+:is(#profile-panel,#password-page,#vehicle-request-page) button{min-height:44px;padding:11px 16px;font-size:15px;}
+#avatar-editor{padding:14px 0;}
+#avatar-editor .profile-photo{width:100px;height:100px;margin-bottom:14px;}
+#profile-driver-info .info-banner{padding:14px;font-size:13px;line-height:1.6;}
+@media(max-width:600px){
+ :is(#profile-panel,#password-page,#vehicle-request-page) .panel{padding:20px;}
+ :is(#profile-panel,#password-page,#vehicle-request-page) h2{font-size:22px;}
+ #profile-form,#driver-personal-fields,#vehicle-request-form{gap:14px;}
+}
