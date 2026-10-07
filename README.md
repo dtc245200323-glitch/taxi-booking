@@ -240,3 +240,5 @@ python docs/build_report.py
 ```
 
 Bản PDF/Word hiện để placeholder cho thông tin sinh viên và repo GitHub; chưa push khi chưa được cung cấp URL/xác thực. Tài khoản/repo phải đặt tên theo MSSV theo yêu cầu giảng viên.
+
+Trang chủ mới: menu xanh, ảnh taxi, đăng ký/khôi phục mật khẩu, ưu đãi công khai và thẻ dịch vụ. Đăng nhập bằng username hoặc SĐT/email đã lưu (alias trùng tài khoản bị từ chối). Ghi nhớ đăng nhập giữ phiên 30 ngày; không chọn thì cookie theo phiên trình duyệt và hết hạn server sau 24 giờ. Ưu đãi lấy từ mã còn hiệu lực; chọn dịch vụ/mã trước đăng nhập được chuyển vào form đặt xe. Ảnh minh họa mới trong static/assets/taxi-hero.png và taxi-services.png.

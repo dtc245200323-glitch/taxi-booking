@@ -25,6 +25,7 @@ jobs:
       - run: docker compose exec -T app python - < tests/qr_payload.py
       - run: docker compose exec -T app python - < tests/map_features.py
       - run: docker compose exec -T app python - < tests/promotions.py
+      - run: docker compose exec -T app python - < tests/landing_auth.py
       - run: python tests/payment_media.py
         env:
           ADMIN_PASSWORD: replace-with-a-long-admin-password

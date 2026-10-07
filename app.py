@@ -33,7 +33,7 @@ def db():
 @app.before_request
 def before():
     request.started = time.monotonic()
-    public = {'/api/health', '/api/auth/login', '/api/auth/register','/api/auth/forgot','/api/auth/reset'}
+    public = {'/api/health', '/api/auth/login', '/api/auth/register','/api/auth/forgot','/api/auth/reset','/api/public/promotions'}
     if request.path.startswith('/api/') and request.path not in public:
         token = request.cookies.get('taxi_session', '')
         with db() as conn:
@@ -119,12 +119,19 @@ TRIP_JOIN = ''' FROM trips t JOIN customers c ON c.id=t.customer_id
 @app.post('/api/auth/login')
 def login():
     data = body()
-    username = field(data, 'username', 50).lower()
+    username = field(data, 'username', 254).lower()
     password = data.get('password')
     if not isinstance(password, str) or len(password)>128:
         raise ValueError('password')
     with db() as conn:
         user = conn.execute('SELECT * FROM users WHERE username=%s FOR UPDATE', (username,)).fetchone()
+        if not user:
+            matches=conn.execute('''SELECT u.* FROM users u LEFT JOIN customers c ON c.id=u.customer_id
+                LEFT JOIN drivers d ON d.id=u.driver_id WHERE lower(c.email)=%s OR lower(d.email)=%s
+                OR c.phone=%s OR d.phone=%s LIMIT 2 FOR UPDATE OF u''',(username,username,username,username)).fetchall()
+            user=matches[0] if len(matches)==1 else None
+        remember=data.get('remember',False) in (True,'on')
+        session_seconds=30*86400 if remember else 86400
         valid = check_password_hash(user['password_hash'] if user else DUMMY_HASH, password)
         if not user or not valid or not user['active']:
             return jsonify(error='Tên đăng nhập hoặc mật khẩu không đúng'), 401
@@ -133,10 +140,10 @@ def login():
         old_token = request.cookies.get('taxi_session', '')
         if old_token:
             conn.execute('DELETE FROM sessions WHERE token_hash=%s', (hashlib.sha256(old_token.encode()).hexdigest(),))
-        conn.execute('INSERT INTO sessions(token_hash,user_id,csrf_token) VALUES (%s,%s,%s)',
-                     (hashlib.sha256(token.encode()).hexdigest(), user['id'], csrf))
+        conn.execute("INSERT INTO sessions(token_hash,user_id,csrf_token,expires_at) VALUES (%s,%s,%s,now()+%s*interval '1 second')",
+                     (hashlib.sha256(token.encode()).hexdigest(), user['id'], csrf, session_seconds))
     response = jsonify(user={k:user[k] for k in ['id','username','role','customer_id','driver_id']}, csrf_token=csrf)
-    response.set_cookie('taxi_session', token, httponly=True, secure=COOKIE_SECURE, samesite='Lax', max_age=86400)
+    response.set_cookie('taxi_session', token, httponly=True, secure=COOKIE_SECURE, samesite='Lax', max_age=session_seconds if remember else None)
     return response
 
 @app.get('/api/auth/me')

@@ -19,6 +19,14 @@ def discount(conn, code, customer_id, subtotal, lock=False):
 
 
 def register_promotions(app, db, roles, body, audit):
+    @app.get('/api/public/promotions')
+    def public_listing():
+        with db() as conn:
+            return jsonify(conn.execute('''SELECT p.code,p.title,p.kind,p.value,p.max_discount,p.min_fare,p.per_customer_limit,p.expires_at
+                FROM promotions p WHERE p.active AND p.expires_at>now() AND
+                (SELECT count(*) FROM trips t WHERE t.promo_code=p.code AND t.status!='cancelled')<p.usage_limit
+                ORDER BY p.id LIMIT 5''').fetchall())
+
     @app.get('/api/promotions')
     def listing():
         with db() as conn:
