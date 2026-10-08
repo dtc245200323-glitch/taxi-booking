@@ -33,6 +33,8 @@ def db():
 @app.before_request
 def before():
     request.started = time.monotonic()
+    if request.method=='POST' and re.fullmatch(r'/api/admin/promotions/[0-9]+/image',request.path):
+        request.max_content_length=10*1024*1024+64*1024
     public = {'/api/health', '/api/auth/login', '/api/auth/register','/api/auth/forgot','/api/auth/reset','/api/public/promotions','/api/public/chat'}
     if request.path.startswith('/api/') and request.path not in public:
         token = request.cookies.get('taxi_session', '')
@@ -185,6 +187,8 @@ def after(response):
     response.headers['Content-Security-Policy'] = "default-src 'self'; img-src 'self' blob: "+tile_source+"; style-src 'self'; script-src 'self'; frame-ancestors 'none'"
     if request.path.startswith('/api/'):
         response.headers['Cache-Control'] = 'no-store'
+    elif request.path.endswith(('.js','.css')) or request.path=='/':
+        response.headers['Cache-Control'] = 'no-cache'
     app.logger.info('%s %s status=%s', request.method, route, response.status_code)
     return response
 
@@ -599,13 +603,36 @@ def record_status(conn,trip_id,old,new):
 def profile():
     role=g.user['role']
     if role=='admin':
-        return jsonify(id=g.user['id'],name=g.user['username'],username=g.user['username'],role=role)
+        with db() as conn:
+            conn.execute('INSERT INTO admin_profiles(user_id,name) VALUES (%s,%s) ON CONFLICT DO NOTHING',(g.user['id'],g.user['username']))
+            if request.method=='PATCH':
+                data=body()
+                if set(data)-{'name','phone','email','age','gender'}:raise ValueError('fields')
+                name=field(data,'name',100);phone=data.get('phone','');email=data.get('email','')
+                if not isinstance(phone,str) or len(phone.strip())>20:raise ValueError('phone')
+                if not isinstance(email,str):raise ValueError('email')
+                email=email.strip()
+                if email and (len(email)>254 or not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email)):raise ValueError('email')
+                current=conn.execute('SELECT age,gender FROM admin_profiles WHERE user_id=%s FOR UPDATE',(g.user['id'],)).fetchone()
+                age=data.get('age',current['age']);gender=data.get('gender',current['gender'])
+                if age is None or age=='':age=None
+                else:
+                    if isinstance(age,bool) or not re.fullmatch(r'[0-9]+',str(age)) or not 1<=int(age)<=120:raise ValueError('age')
+                    age=int(age)
+                if gender not in (None,'','male','female','other'):raise ValueError('gender')
+                conn.execute('UPDATE admin_profiles SET name=%s,phone=%s,email=%s,age=%s,gender=%s WHERE user_id=%s',
+                             (name,phone.strip(),email or None,age,gender or None,g.user['id']))
+                audit(conn,'update_profile','admin',g.user['id'])
+            row=conn.execute('SELECT * FROM admin_profiles WHERE user_id=%s',(g.user['id'],)).fetchone()
+            avatar=conn.execute('SELECT version FROM admin_avatars WHERE admin_id=%s',(g.user['id'],)).fetchone()
+            row.update(id=g.user['id'],username=g.user['username'],role=role,avatar_url='/api/profile/avatar?v='+avatar['version'] if avatar else None)
+        return jsonify(row)
     table='customers' if role=='customer' else 'drivers'
     profile_id=g.user[role+'_id']
     with db() as conn:
         if request.method=='PATCH':
             data=body()
-            allowed={'name','phone','email'}
+            allowed={'name','phone','email','age','gender'}
             if role=='driver':allowed.update({'age','gender','hometown','experience_years'})
             if set(data)-allowed:
                 raise ValueError('fields')
@@ -613,6 +640,15 @@ def profile():
             email=data.get('email','').strip()
             if email and (len(email)>254 or not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email)):
                 raise ValueError('email')
+            if role=='customer':
+                current=conn.execute('SELECT age,gender FROM customers WHERE id=%s FOR UPDATE',(profile_id,)).fetchone()
+                age=data.get('age',current['age']);gender=data.get('gender',current['gender'])
+                if age is None or age=='':age=None
+                else:
+                    if isinstance(age,bool) or not re.fullmatch(r'[0-9]+',str(age)) or not 1<=int(age)<=120:raise ValueError('age')
+                    age=int(age)
+                if gender not in (None,'','male','female','other'):raise ValueError('gender')
+                conn.execute('UPDATE customers SET age=%s,gender=%s WHERE id=%s',(age,gender or None,profile_id))
             if role=='driver':
                 current=conn.execute('SELECT * FROM drivers WHERE id=%s FOR UPDATE',(profile_id,)).fetchone()
                 extra={key:data.get(key,current[key]) for key in ('age','gender','hometown','experience_years')}
@@ -633,6 +669,9 @@ def profile():
             conn.execute('UPDATE '+table+' SET name=%s,phone=%s,email=%s WHERE id=%s',(name,phone,email or None,profile_id))
             audit(conn,'update_profile',role,profile_id)
         row=conn.execute('SELECT * FROM '+table+' WHERE id=%s',(profile_id,)).fetchone()
+        if role=='customer':
+            avatar=conn.execute('SELECT version FROM customer_avatars WHERE customer_id=%s',(profile_id,)).fetchone()
+            row['avatar_url']='/api/profile/avatar?v='+avatar['version'] if avatar else None
         if role=='driver':
             row['vehicle']=conn.execute('SELECT * FROM vehicles WHERE driver_id=%s',(profile_id,)).fetchone()
             avatar=conn.execute('SELECT version FROM driver_avatars WHERE driver_id=%s',(profile_id,)).fetchone()
@@ -758,12 +797,26 @@ def review(trip_id):
     if not 1<=stars<=5 or not isinstance(comment,str) or len(comment)>1000:
         raise ValueError('review')
     with db() as conn:
-        trip=conn.execute("SELECT id FROM trips WHERE id=%s AND customer_id=%s AND status='completed'",(trip_id,g.user['customer_id'])).fetchone()
+        trip=conn.execute("SELECT id,payment,driver_id FROM trips WHERE id=%s AND customer_id=%s AND status='completed'",(trip_id,g.user['customer_id'])).fetchone()
         if not trip:
             return jsonify(error='Chỉ được đánh giá chuyến của mình đã hoàn thành'),409
+        if not trip['driver_id']:return jsonify(error='Chuyến chưa có tài xế để đánh giá'),409
+        if trip['payment']=='transfer' and not conn.execute("SELECT id FROM payment_attempts WHERE trip_id=%s AND status='success'",(trip_id,)).fetchone():
+            return jsonify(error='Thanh toán thành công trước khi đánh giá tài xế'),409
         conn.execute('INSERT INTO reviews(trip_id,customer_id,stars,comment) VALUES (%s,%s,%s,%s)',(trip_id,g.user['customer_id'],stars,comment.strip()))
         audit(conn,'review','trip',trip_id)
     return jsonify(status='ok'),201
+
+@app.get('/api/trips/reviewable')
+@roles('customer')
+def reviewable_trips():
+    with db() as conn:
+        rows=conn.execute('''SELECT t.id,t.pickup,t.destination,t.fare,t.payment,d.name driver_name,r.stars
+            FROM trips t JOIN drivers d ON d.id=t.driver_id LEFT JOIN reviews r ON r.trip_id=t.id
+            WHERE t.customer_id=%s AND t.status='completed' AND
+            (t.payment='cash' OR EXISTS(SELECT 1 FROM payment_attempts p WHERE p.trip_id=t.id AND p.status='success'))
+            ORDER BY t.id DESC LIMIT 100''',(g.user['customer_id'],)).fetchall()
+    return jsonify(rows)
 
 @app.route('/api/complaints',methods=['GET','POST'])
 @roles('customer','admin')
@@ -960,3 +1013,8 @@ register_promotions(app,db,roles,body,audit)
 
 from chat import register_chat
 register_chat(app)
+from support import register_support
+register_support(app,db,roles,body,field)
+
+from driver_support import register_driver_support
+register_driver_support(app,db,roles,body,field)

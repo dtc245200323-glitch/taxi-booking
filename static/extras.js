@@ -1,23 +1,33 @@
 const paymentLabels={awaiting_transfer:'Chưa chuyển khoản',pending:'Chờ xác nhận',success:'Chuyển khoản thành công',failed:'Chuyển khoản thất bại'};
 const paymentBadge=p=>`<span class="badge ${p.status==='success'?'completed':p.status==='failed'?'cancelled':'pending'}">${paymentLabels[p.status]}</span>`;
 const Extras=window.Extras={
-  payments:[],seen:null,dialogTrip:null,uploading:false,
-  reset(){this.payments=[];this.seen=null;this.dialogTrip=null;$('#customer-payments').replaceChildren();$('#payment-admin-list').replaceChildren();$('#bank-settings-form').reset();$('#avatar-file').value='';$('#header-avatar').textContent='●';$('#profile-photo').src='/assets/driver.svg';},
+  bankAccounts:[],editingBank:false,payments:[],seen:null,dialogTrip:null,uploading:false,
+  reset(){window.DriverRatings?.reset();this.bankAccounts=[];$('#bank-account-list').replaceChildren();$('#add-bank-account-form').reset();$('#add-bank-account-panel').hidden=true;this.editingBank=false;this.bankMode();this.payments=[];this.seen=null;this.dialogTrip=null;$('#customer-payments').replaceChildren();$('#payment-admin-list').replaceChildren();$('#bank-settings-form').reset();$('#avatar-file').value='';$('#header-avatar').textContent='●';$('#profile-photo').src='/assets/driver.svg';},
   async load(){
     const id=user?.id;if(!id)return;
-    $('#avatar-editor').hidden=user.role!=='driver';
-    if(user.role==='driver'){
-      const url=profileData.avatar_url||'/assets/driver.svg';
-      $('#profile-photo').src=url;
-      $('#header-avatar').innerHTML=`<img src="${escape(url)}" alt="Ảnh đại diện">`;$('#remove-avatar').hidden=!profileData.avatar_url;return;
+    $('#avatar-editor').hidden=false;
+    if(['driver','customer','admin'].includes(user.role)){
+      const url=profileData.avatar_url||'/assets/driver.svg';$('#profile-photo').src=url;
+      document.querySelectorAll('#header-avatar,#customer-top .avatar').forEach(el=>{if(profileData.avatar_url)el.innerHTML=`<img src="${escape(url)}" alt="Ảnh đại diện">`;else el.textContent='●';});
+      $('#remove-avatar').hidden=!profileData.avatar_url;
+      if(user.role==='driver')return;
     }
     const role=user.role;
-    const [payments,bank]=await Promise.all([api(role==='admin'?'admin/payments':'payments'),api('payment/settings')]);
+    const [payments,bank,accounts]=await Promise.all([api(role==='admin'?'admin/payments':'payments'),api('payment/settings'),role==='admin'?api('admin/bank-accounts'):Promise.resolve([])]);
     if(user?.id!==id)return;
     this.payments=payments;
-    if(role==='admin')for(const key of ['bank_name','bank_bin','account_no','account_name'])if(!document.activeElement.closest('#bank-settings-form'))$('#bank-settings-form [name='+key+']').value=bank[key];
+    if(role==='admin'){this.bankAccounts=accounts;if(!this.editingBank)for(const key of ['bank_name','bank_bin','account_no','account_name'])$('#bank-settings-form [name='+key+']').value=bank[key];this.bankMode();this.renderBankAccounts();}
     if(role==='customer'&&this.seen){for(const p of payments){if(this.seen[p.id]&&this.seen[p.id]!==p.status&&['success','failed'].includes(p.status))message(`${paymentLabels[p.status]} · Chuyến #TX${p.trip_id}${p.note?' · '+p.note:''}`,p.status==='failed');}}
-    this.seen=Object.fromEntries(payments.map(p=>[p.id,p.status]));this.renderPayments();
+    this.seen=Object.fromEntries(payments.map(p=>[p.id,p.status]));this.renderPayments();if(role==='customer')await window.DriverRatings?.load();
+  },
+  bankMode(){
+    const form=$('#bank-settings-form'),button=form.querySelector('button');
+    form.querySelectorAll('input').forEach(input=>input.disabled=!this.editingBank);
+    button.type=this.editingBank?'submit':'button';
+    button.textContent=this.editingBank?'Lưu tài khoản nhận tiền':'Chỉnh sửa';
+  },
+  renderBankAccounts(){
+    $('#bank-account-list').innerHTML=this.bankAccounts.map(bank=>`<article class="feedback-card"><div class="profile-heading"><b>${escape(bank.bank_name)}</b>${bank.selected?'<span class="badge completed">Đang nhận tiền</span>':''}</div><p>${escape(bank.account_no)} · ${escape(bank.account_name)}</p>${bank.selected?'':`<button type="button" class="secondary compact" data-select-bank="${bank.id}">Dùng tài khoản này</button>`}</article>`).join('');
   },
   renderPayments(){
     const admin=user.role==='admin';$('#admin-payments').hidden=!admin;
@@ -25,7 +35,7 @@ const Extras=window.Extras={
     if(admin){const filter=$('#payment-status-filter').value;$('#payment-admin-list').innerHTML=this.payments.filter(p=>!filter||p.status===filter).map(p=>`<tr><td><b>#TX${p.trip_id}</b><br>${escape(p.customer_name)}</td><td>${money(p.amount)}<br><b>${escape(p.reference)}</b></td><td>${escape(p.bank_name)}<br>${escape(p.account_no)}<br>${escape(p.account_name)}</td><td>${paymentBadge(p)}${p.note?`<p>${escape(p.note)}</p>`:''}</td><td>${p.status==='pending'?`<button data-confirm-payment="${p.id}" data-payment-decision="success">Đã nhận tiền</button><button class="secondary" data-confirm-payment="${p.id}" data-payment-decision="failed">Từ chối</button>`:'Đã lưu trạng thái'}</td></tr>`).join('')||'<tr><td colspan="5">Chưa có chuyển khoản theo bộ lọc.</td></tr>';}
     else $('#customer-payments').innerHTML=this.payments.map(p=>`<article class="feedback-card"><div class="profile-heading"><b>Chuyến #TX${p.trip_id} · ${money(p.amount)}</b>${paymentBadge(p)}</div><p>${escape(p.pickup)} → ${escape(p.destination)}</p><p>Nội dung: <b>${escape(p.reference)}</b></p>${p.note?`<p>${escape(p.note)}</p>`:''}<button class="secondary" data-payment-trip="${p.trip_id}">Xem thanh toán</button></article>`).join('')||'<p>Chưa có yêu cầu chuyển khoản. Chọn phương thức chuyển khoản khi đặt xe hoặc trong chi tiết chuyến.</p>';
   },
-  async showPayment(tripId,create=false){
+  async showPayment(tripId,create=false,checked=false){
     const result=await api('trips/'+tripId+'/payment',create?'POST':'GET',create?{}:undefined),p=result.payment;
     this.dialogTrip=tripId;
     if(!p){Admin.open('Thanh toán chuyển khoản',`<p>Chưa tạo mã thanh toán cho chuyến #TX${tripId}.</p><button type="button" data-create-payment="${tripId}">Tạo mã QR chuyển khoản</button>`,null);return;}
@@ -36,8 +46,8 @@ const Extras=window.Extras={
     if(p.status==='awaiting_transfer')html+=`<p>Kiểm tra người nhận, chuyển đúng số tiền và nội dung trong ứng dụng ngân hàng. Mã VietQR được tạo trực tiếp trong hệ thống.</p><button type="button" class="primary" data-submit-payment="${tripId}" data-payment-id="${p.id}">Tôi đã chuyển khoản</button>`;
     if(p.status==='pending')html+='<p class="info-banner">Đã gửi yêu cầu xác nhận. Admin đang kiểm tra tiền vào tài khoản; chưa được xác nhận thành công.</p>';
     if(p.status==='failed')html+=`<p>Kiểm tra lý do từ chối trước khi chuyển lại. Nếu đã bị trừ tiền, liên hệ admin và cung cấp mã giao dịch.</p><button type="button" data-create-payment="${tripId}">Tạo yêu cầu mới</button>`;
-    html+=`<button type="button" class="secondary" data-payment-trip="${tripId}">Kiểm tra trạng thái</button></div>`;
-    if(result.history.length>1)html+='<h3>Lịch sử thanh toán</h3>'+result.history.map(h=>`<p>${paymentBadge(h)} · ${new Date(h.created_at).toLocaleString('vi-VN')} ${escape(h.note)}</p>`).join('');
+    html+=`<button type="button" class="secondary" data-check-payment="${tripId}">Kiểm tra trạng thái</button><p id="payment-check-status" class="hint" role="status" aria-live="polite">${checked?'Đã kiểm tra lúc '+new Date().toLocaleTimeString('vi-VN')+' · '+paymentLabels[p.status]+(p.status==='awaiting_transfer'?'. Sau khi chuyển tiền, bấm “Tôi đã chuyển khoản” để gửi yêu cầu xác nhận.':p.status==='pending'?'. Đang chờ admin đối soát.':''):''}</p></div>`;
+    if(p.status==='success'&&user?.role==='customer'){const trip=await api('trips/'+tripId);if(trip.status==='completed')html+=trip.review?'<p class="stars">'+ '★'.repeat(trip.review.stars)+' ? '+trip.review.stars+'/5</p>':`<button type="button" data-rate-driver="${tripId}">★ Đánh giá tài xế</button>`;}if(result.history.length>1)html+='<h3>Lịch sử thanh toán</h3>'+result.history.map(h=>`<p>${paymentBadge(h)} · ${new Date(h.created_at).toLocaleString('vi-VN')} ${escape(h.note)}</p>`).join('');
     Admin.open('Thanh toán chuyển khoản',html,null);
     $('.transfer-qr')?.addEventListener('error',()=>{$('#qr-error').hidden=false;$('.transfer-qr').hidden=true;});
   },
@@ -47,11 +57,18 @@ const Extras=window.Extras={
     if(file.size>2*1024*1024)throw new Error('Ảnh phải nhỏ hơn 2 MB.');
     if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('Chọn ảnh JPG, PNG hoặc WebP.');
     this.uploading=true;document.querySelectorAll('[data-choose-avatar]').forEach(b=>b.disabled=true);
-    try{const data=new FormData();data.append('image',file);const r=await fetch('/api/profile/avatar',{method:'PUT',credentials:'same-origin',headers:{'X-CSRF-Token':csrf},body:data});const result=await r.json();if(!r.ok)throw new Error(result.error||'Tải ảnh thất bại');await load();message('Đã cập nhật ảnh đại diện tài xế.');}
+    try{const data=new FormData();data.append('image',file);const r=await fetch('/api/profile/avatar',{method:'PUT',credentials:'same-origin',headers:{'X-CSRF-Token':csrf},body:data});const result=await r.json();if(!r.ok)throw new Error(result.error||'Tải ảnh thất bại');await load();message('Đã cập nhật ảnh đại diện.');}
     finally{this.uploading=false;$('#avatar-file').value='';document.querySelectorAll('[data-choose-avatar]').forEach(b=>b.disabled=false);}
   }
 };
 document.addEventListener('click',e=>{
+  const check=e.target.closest('[data-check-payment]');if(check){
+    if(check.disabled)return;check.disabled=true;check.textContent='Đang kiểm tra...';
+    $('#payment-check-status').textContent='Đang tải trạng thái thanh toán mới nhất...';
+    (async()=>{try{await Extras.showPayment(Number(check.dataset.checkPayment),false,true);}
+    catch(error){$('#dialog-error').textContent=error.message;$('#payment-check-status').textContent='Không kiểm tra được trạng thái. Vui lòng thử lại.';}
+    finally{check.disabled=false;check.textContent='Kiểm tra trạng thái';}})();return;
+  }
   const photo=e.target.closest('[data-choose-avatar]');if(photo){$('#avatar-file').click();return;}
   const show=e.target.closest('[data-payment-trip]');if(show){run(()=>Extras.showPayment(Number(show.dataset.paymentTrip)));return;}
   const create=e.target.closest('[data-create-payment]');if(create){run(async()=>{create.disabled=true;try{await Extras.showPayment(Number(create.dataset.createPayment),true);await load();}finally{create.disabled=false;}});return;}
@@ -60,7 +77,44 @@ document.addEventListener('click',e=>{
 });
 $('#avatar-file').onchange=e=>run(()=>Extras.upload(e.target.files[0]));
 $('#remove-avatar').onclick=()=>run(async()=>{await api('profile/avatar','DELETE');await load();message('Đã xóa ảnh đại diện.');});
-$('#bank-settings-form').onsubmit=e=>{e.preventDefault();run(async()=>{await api('payment/settings','PATCH',Object.fromEntries(new FormData(e.target)));await load();message('Đã lưu tài khoản nhận chuyển khoản.');});};
+$('#add-bank-account').onclick=()=>{
+  $('#add-bank-account-panel').hidden=false;$('#add-bank-account-form').hidden=false;
+  $('#add-bank-account-form [name=bank_name]').focus();
+};
+$('#cancel-add-bank').onclick=()=>{
+  $('#add-bank-account-panel').hidden=true;$('#add-bank-account-form').reset();
+};
+$('#add-bank-account-form').onsubmit=e=>{
+  e.preventDefault();const form=e.target,button=form.querySelector('[type=submit]');if(button.disabled)return;
+  const data=Object.fromEntries(new FormData(form));button.disabled=true;
+  run(async()=>{try{
+    await api('admin/bank-accounts','POST',data);
+    form.reset();$('#add-bank-account-panel').hidden=true;await Extras.load();
+    message('Đã thêm tài khoản ngân hàng. Bấm “Dùng tài khoản này” để nhận tiền vào tài khoản mới.');
+  }finally{button.disabled=false;}});
+};
+$('#bank-account-list').addEventListener('click',e=>{
+  const button=e.target.closest('[data-select-bank]');if(!button||button.disabled)return;
+  if(Extras.editingBank){message('Lưu thông tin đang chỉnh sửa trước khi chọn tài khoản khác.',true);return;}
+  button.disabled=true;
+  run(async()=>{try{
+    await api('admin/bank-accounts/'+button.dataset.selectBank+'/select','POST',{});
+    await Extras.load();message('Đã chọn tài khoản nhận tiền cho các yêu cầu thanh toán mới.');
+  }finally{button.disabled=false;}});
+});
+$('#bank-settings-form').addEventListener('click',e=>{
+  const button=e.target.closest('button');if(!button||Extras.editingBank)return;
+  e.preventDefault();Extras.editingBank=true;Extras.bankMode();$('#bank-settings-form [name=bank_name]').focus();
+});
+$('#bank-settings-form').onsubmit=e=>{
+  e.preventDefault();if(!Extras.editingBank)return;
+  const form=e.target,button=form.querySelector('button');if(button.disabled)return;
+  const data=Object.fromEntries(new FormData(form));button.disabled=true;
+  run(async()=>{try{
+    await api('payment/settings','PATCH',data);
+    Extras.editingBank=false;Extras.bankMode();await load();message('Đã lưu tài khoản nhận chuyển khoản.');
+  }finally{button.disabled=false;}});
+};
 $('#payment-status-filter').onchange=()=>Extras.renderPayments();
 $('#refresh-payments').onclick=()=>run(load);
 setInterval(()=>{if(user?.role==='customer'&&Extras.dialogTrip&&$('#admin-dialog').open&&$('#dialog-title').textContent==='Thanh toán chuyển khoản')run(async()=>{const result=await api('trips/'+Extras.dialogTrip+'/payment');const p=result.payment;if(p&&['success','failed'].includes(p.status)&&!$('#dialog-fields').textContent.includes(paymentLabels[p.status])){await Extras.showPayment(Extras.dialogTrip);message(paymentLabels[p.status]+(p.note?' · '+p.note:''),p.status==='failed');}});},6000);

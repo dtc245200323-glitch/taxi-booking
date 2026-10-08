@@ -27,6 +27,7 @@ jobs:
       - run: docker compose exec -T app python - < tests/promotions.py
       - run: docker compose exec -T app python - < tests/landing_auth.py
       - run: docker compose exec -T app python - < tests/chat.py
+      - run: docker compose exec -T app python - < tests/saved_promotions.py
       - run: python tests/payment_media.py
         env:
           ADMIN_PASSWORD: replace-with-a-long-admin-password

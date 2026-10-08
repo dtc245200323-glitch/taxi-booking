@@ -42,7 +42,7 @@ assert photo['avatar_url']==driver.call('/api/profile')['avatar_url']
 with driver.opener.open(BASE+photo['avatar_url']) as response:
     assert response.headers['Content-Type'].startswith('image/jpeg') and response.read().startswith(b'\xff\xd8')
 other.call(photo['avatar_url'],expected=403)
-upload(customer,png(),403);upload(driver,b'not an image',400)
+upload(customer,png(),200);customer.call('/api/profile/avatar','DELETE');upload(driver,b'not an image',400)
 upload(driver,b'x'*(2*1024*1024+1),413)
 driver.call('/api/profile/avatar','DELETE')
 assert driver.call('/api/profile')['avatar_url'] is None

@@ -107,7 +107,18 @@ CREATE TABLE IF NOT EXISTS payment_settings (
  id INTEGER PRIMARY KEY CHECK(id=1),bank_bin CHAR(6) NOT NULL,
  bank_name VARCHAR(100) NOT NULL,account_no VARCHAR(19) NOT NULL,account_name VARCHAR(100) NOT NULL
 );
-INSERT INTO payment_settings VALUES (1,'970436','Vietcombank','9398142181','LY MINH PHUONG') ON CONFLICT DO NOTHING;
+INSERT INTO payment_settings (id,bank_bin,bank_name,account_no,account_name) VALUES (1,'970436','Vietcombank','9398142181','LY MINH PHUONG') ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS bank_accounts (
+ id SERIAL PRIMARY KEY,bank_bin CHAR(6) NOT NULL,bank_name VARCHAR(100) NOT NULL,
+ account_no VARCHAR(19) NOT NULL,account_name VARCHAR(100) NOT NULL,
+ UNIQUE(bank_bin,account_no)
+);
+ALTER TABLE payment_settings ADD COLUMN IF NOT EXISTS bank_account_id INTEGER REFERENCES bank_accounts(id);
+INSERT INTO bank_accounts (bank_bin,bank_name,account_no,account_name)
+ SELECT bank_bin,bank_name,account_no,account_name FROM payment_settings WHERE bank_account_id IS NULL
+ ON CONFLICT (bank_bin,account_no) DO NOTHING;
+UPDATE payment_settings s SET bank_account_id=b.id FROM bank_accounts b
+ WHERE s.bank_account_id IS NULL AND s.bank_bin=b.bank_bin AND s.account_no=b.account_no;
 CREATE TABLE IF NOT EXISTS payment_attempts (
  id SERIAL PRIMARY KEY,trip_id INTEGER NOT NULL REFERENCES trips(id),
  amount NUMERIC(12,2) NOT NULL CHECK(amount>0),reference VARCHAR(25) UNIQUE NOT NULL,
@@ -162,3 +173,54 @@ ALTER TABLE drivers ADD COLUMN IF NOT EXISTS age INTEGER CHECK(age BETWEEN 18 AN
 ALTER TABLE drivers ADD COLUMN IF NOT EXISTS gender VARCHAR(10) CHECK(gender IN ('male','female','other'));
 ALTER TABLE drivers ADD COLUMN IF NOT EXISTS hometown VARCHAR(150);
 ALTER TABLE drivers ADD COLUMN IF NOT EXISTS experience_years INTEGER CHECK(experience_years BETWEEN 0 AND 82);
+
+CREATE TABLE IF NOT EXISTS saved_promotions (
+ user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ promotion_id INTEGER NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
+ saved_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ PRIMARY KEY(user_id,promotion_id)
+);
+
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS image_data TEXT;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS age INTEGER CHECK(age BETWEEN 1 AND 120);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS gender VARCHAR(10) CHECK(gender IN ('male','female','other'));
+CREATE TABLE IF NOT EXISTS customer_avatars (
+ customer_id INTEGER PRIMARY KEY REFERENCES customers(id) ON DELETE CASCADE,
+ content BYTEA NOT NULL,version VARCHAR(32) NOT NULL,updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS admin_profiles (
+ user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+ name VARCHAR(100) NOT NULL,phone VARCHAR(20) NOT NULL DEFAULT '',email VARCHAR(254),
+ age INTEGER CHECK(age BETWEEN 1 AND 120),gender VARCHAR(10) CHECK(gender IN ('male','female','other'))
+);
+INSERT INTO admin_profiles(user_id,name) SELECT id,username FROM users WHERE role='admin' ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS admin_avatars (
+ admin_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+ content BYTEA NOT NULL,version VARCHAR(32) NOT NULL,updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS support_conversations (
+ id SERIAL PRIMARY KEY,customer_user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+ admin_read_id INTEGER NOT NULL DEFAULT 0,customer_read_id INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS support_messages (
+ id SERIAL PRIMARY KEY,conversation_id INTEGER NOT NULL REFERENCES support_conversations(id) ON DELETE CASCADE,
+ sender_id INTEGER NOT NULL REFERENCES users(id),content VARCHAR(2000) NOT NULL CHECK(length(content)>0),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS support_messages_thread ON support_messages(conversation_id,id);
+
+CREATE TABLE IF NOT EXISTS driver_support_conversations (
+ id SERIAL PRIMARY KEY,driver_user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+ admin_read_id INTEGER NOT NULL DEFAULT 0,driver_read_id INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS driver_support_messages (
+ id SERIAL PRIMARY KEY,conversation_id INTEGER NOT NULL REFERENCES driver_support_conversations(id) ON DELETE CASCADE,
+ sender_id INTEGER NOT NULL REFERENCES users(id),content VARCHAR(2000) NOT NULL CHECK(length(content)>0),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS driver_support_messages_thread ON driver_support_messages(conversation_id,id);
+
+ALTER TABLE support_conversations ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+ALTER TABLE support_conversations ADD COLUMN IF NOT EXISTS rating INTEGER CHECK(rating BETWEEN 1 AND 5);
+ALTER TABLE support_conversations DROP CONSTRAINT IF EXISTS support_conversations_customer_user_id_key;
+CREATE UNIQUE INDEX IF NOT EXISTS support_one_open_conversation ON support_conversations(customer_user_id) WHERE closed_at IS NULL;

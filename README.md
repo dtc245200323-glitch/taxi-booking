@@ -248,3 +248,7 @@ Trang chủ mới: menu xanh, ảnh taxi, đăng ký/khôi phục mật khẩu, 
 Trang chủ không chứa biểu mẫu đăng nhập. Truy cập `/#login` hoặc `/#register` để mở trang riêng; hỗ trợ quên mật khẩu vẫn hoạt động. Nút tin nhắn góc dưới mở khung trò chuyện ở cả trang công khai và sau đăng nhập.
 
 Chat hỗ trợ đặt xe, các loại phương tiện/dịch vụ và xử lý lỗi. Để bật AI, điền `OPENAI_API_KEY` vào `.env` (không đưa khóa vào Git hoặc JavaScript), tùy chọn `OPENAI_MODEL` rồi chạy `docker-compose up -d --build app` và `docker-compose restart nginx`. Tích hợp phía máy chủ theo [OpenAI Responses API](https://developers.openai.com/api/docs/guides/text), gửi tối đa 8 tin gần nhất, `store=false`, timeout 20 giây và giới hạn 30 yêu cầu/phút trên tiến trình. Không tự gửi hồ sơ, chuyến đi hoặc cookie đến AI. Tin nhắn do người dùng nhập được gửi đến nhà cung cấp khi AI bật. Chat chỉ tư vấn, không thực hiện đặt xe hoặc xác nhận thanh toán. Chưa có khóa hoặc AI lỗi thì hiển thị rõ **Hướng dẫn cơ bản**, không giả lập AI.
+
+
+### Lưu và chọn ưu đãi
+Bấm khung ảnh trên bản đồ để mở `/#offers`, lưu mã vào tài khoản PostgreSQL. Tại đặt xe, chọn **Chọn mã giảm giá đã lưu** mở `/#choose-promo`, chọn mã và **Lưu lựa chọn**. Mã vẫn cần bấm Áp dụng để kiểm tra quãng đường, giá tối thiểu và lượt dùng; lưu mã không giữ chỗ hoặc bảo đảm đủ điều kiện. Admin vào Cài đặt → Quảng cáo và mã giảm giá để tạo mã và tải ảnh quảng cáo JPG/PNG/WebP tối đa 2 MB. Khung ảnh dùng ảnh mặc định đến khi admin tải ảnh riêng; chỉ hiển thị chương trình thực đang bật.

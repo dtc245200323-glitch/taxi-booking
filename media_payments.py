@@ -54,14 +54,21 @@ def register(app, db, roles, scope, body, field, audit):
         output=io.BytesIO();image.save(output,format='PNG')
         return Response(output.getvalue(),mimetype='image/png')
 
-    @app.route('/api/profile/avatar', methods=['PUT', 'DELETE'])
-    @roles('driver')
+    @app.route('/api/profile/avatar', methods=['GET','PUT', 'DELETE'])
+    @roles('driver','customer','admin')
     def avatar_upload():
-        driver_id = g.user['driver_id']
+        role=g.user['role'];profile_id=g.user['id'] if role=='admin' else g.user[role+'_id']
+        table={'driver':'driver_avatars','customer':'customer_avatars','admin':'admin_avatars'}[role]
+        column=role+'_id'
+        if request.method=='GET':
+            with db() as conn:
+                row=conn.execute('SELECT content FROM '+table+' WHERE '+column+'=%s',(profile_id,)).fetchone()
+            if not row:return jsonify(error='Chưa có ảnh đại diện'),404
+            return Response(bytes(row['content']),mimetype='image/jpeg')
         if request.method == 'DELETE':
             with db() as conn:
-                conn.execute('DELETE FROM driver_avatars WHERE driver_id=%s', (driver_id,))
-                audit(conn, 'remove_avatar', 'driver', driver_id)
+                conn.execute('DELETE FROM '+table+' WHERE '+column+'=%s', (profile_id,))
+                audit(conn, 'remove_avatar', role, profile_id)
             return jsonify(avatar_url=None)
         uploaded = request.files.get('image')
         if not uploaded:
@@ -84,11 +91,10 @@ def register(app, db, roles, scope, body, field, audit):
             return jsonify(error='Ảnh không hợp lệ. Chọn JPG, PNG hoặc WebP, tối đa 16 triệu điểm ảnh.'), 400
         version = secrets.token_hex(12)
         with db() as conn:
-            conn.execute('''INSERT INTO driver_avatars(driver_id,content,version) VALUES (%s,%s,%s)
-                ON CONFLICT(driver_id) DO UPDATE SET content=excluded.content,version=excluded.version,updated_at=now()''',
-                         (driver_id, output.getvalue(), version))
-            audit(conn, 'upload_avatar', 'driver', driver_id)
-        return jsonify(avatar_url=f'/api/drivers/{driver_id}/avatar?v={version}')
+            conn.execute('INSERT INTO '+table+'('+column+',content,version) VALUES (%s,%s,%s) ON CONFLICT('+column+') DO UPDATE SET content=excluded.content,version=excluded.version,updated_at=now()',
+                         (profile_id, output.getvalue(), version))
+            audit(conn, 'upload_avatar', role, profile_id)
+        return jsonify(avatar_url=f'/api/drivers/{profile_id}/avatar?v={version}' if role=='driver' else f'/api/profile/avatar?v={version}')
 
     @app.get('/api/drivers/<int:driver_id>/avatar')
     def avatar_get(driver_id):
@@ -106,7 +112,46 @@ def register(app, db, roles, scope, body, field, audit):
 
     @app.errorhandler(413)
     def too_large(error):
+        if re.fullmatch(r'/api/admin/promotions/[0-9]+/image',request.path):
+            return jsonify(error='Ảnh quảng cáo tối đa 10 MB.'),413
         return jsonify(error='Tệp tải lên quá lớn. Chọn ảnh nhỏ hơn 2 MB.'), 413
+
+    def bank_fields(data):
+        values = tuple(field(data,key,limit) for key,limit in
+                       [('bank_bin',6),('bank_name',100),('account_no',19),('account_name',100)])
+        if not re.fullmatch(r'[0-9]{6}',values[0]) or not re.fullmatch(r'[0-9]{6,19}',values[2]) or not re.fullmatch(r'[A-Z ]{5,100}',values[3]):
+            raise ValueError('bank_account')
+        return values
+
+    @app.route('/api/admin/bank-accounts', methods=['GET','POST'])
+    @roles('admin')
+    def bank_accounts():
+        with db() as conn:
+            if request.method=='POST':
+                values=bank_fields(body())
+                row=conn.execute('''INSERT INTO bank_accounts(bank_bin,bank_name,account_no,account_name)
+                    VALUES (%s,%s,%s,%s) ON CONFLICT (bank_bin,account_no) DO NOTHING RETURNING *''',values).fetchone()
+                if not row:
+                    return jsonify(error='Tài khoản ngân hàng này đã có trong danh sách.'),409
+                audit(conn,'create_bank_account','bank_account',row['id'])
+                return jsonify(row),201
+            rows=conn.execute('''SELECT b.*,b.id=s.bank_account_id AS selected FROM bank_accounts b
+                CROSS JOIN payment_settings s WHERE s.id=1 ORDER BY selected DESC,b.id''').fetchall()
+        return jsonify(rows)
+
+    @app.post('/api/admin/bank-accounts/<int:account_id>/select')
+    @roles('admin')
+    def select_bank_account(account_id):
+        with db() as conn:
+            conn.execute('SELECT id FROM payment_settings WHERE id=1 FOR UPDATE')
+            bank=conn.execute('SELECT * FROM bank_accounts WHERE id=%s FOR UPDATE',(account_id,)).fetchone()
+            if not bank:
+                return jsonify(error='Không tìm thấy tài khoản ngân hàng.'),404
+            conn.execute('''UPDATE payment_settings SET bank_account_id=%s,bank_bin=%s,bank_name=%s,
+                account_no=%s,account_name=%s WHERE id=1''',
+                (account_id,bank['bank_bin'],bank['bank_name'],bank['account_no'],bank['account_name']))
+            audit(conn,'select_bank_account','bank_account',account_id)
+        return jsonify(bank)
 
     @app.route('/api/payment/settings', methods=['GET', 'PATCH'])
     def settings():
@@ -115,10 +160,14 @@ def register(app, db, roles, scope, body, field, audit):
         with db() as conn:
             if request.method=='PATCH':
                 data=body()
-                bank_bin, bank_name = field(data,'bank_bin',6), field(data,'bank_name',100)
-                account_no, account_name = field(data,'account_no',19), field(data,'account_name',100)
-                if not re.fullmatch(r'[0-9]{6}',bank_bin) or not re.fullmatch(r'[0-9]{6,19}',account_no) or not re.fullmatch(r'[A-Z ]{5,100}',account_name):
-                    return jsonify(error='BIN gồm 6 chữ số; số tài khoản 6–19 chữ số; tên chủ tài khoản viết hoa không dấu.'),400
+                bank_bin,bank_name,account_no,account_name=bank_fields(data)
+                current=conn.execute('SELECT bank_account_id FROM payment_settings WHERE id=1 FOR UPDATE').fetchone()
+                duplicate=conn.execute('SELECT id FROM bank_accounts WHERE bank_bin=%s AND account_no=%s',
+                                       (bank_bin,account_no)).fetchone()
+                if duplicate and duplicate['id']!=current['bank_account_id']:
+                    return jsonify(error='Tài khoản ngân hàng này đã có trong danh sách.'),409
+                conn.execute('UPDATE bank_accounts SET bank_bin=%s,bank_name=%s,account_no=%s,account_name=%s WHERE id=%s',
+                             (bank_bin,bank_name,account_no,account_name,current['bank_account_id']))
                 conn.execute('UPDATE payment_settings SET bank_bin=%s,bank_name=%s,account_no=%s,account_name=%s WHERE id=1',
                              (bank_bin,bank_name,account_no,account_name))
                 audit(conn,'update_payment_settings','payment_settings',1)

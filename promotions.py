@@ -1,6 +1,10 @@
 import re
+import io
+import base64
+import hashlib
+from PIL import Image, ImageOps, UnidentifiedImageError
 from decimal import Decimal, ROUND_HALF_UP
-from flask import request, jsonify, g
+from flask import request, jsonify, g, Response
 
 
 def discount(conn, code, customer_id, subtotal, lock=False):
@@ -19,6 +23,22 @@ def discount(conn, code, customer_id, subtotal, lock=False):
 
 
 def register_promotions(app, db, roles, body, audit):
+    def with_image_url(row):
+        if row.get('image_data'):
+            version=hashlib.sha256(row['image_data'].encode()).hexdigest()[:16]
+            row['image_url']=f"/api/promotions/{row['id']}/image?v={version}"
+        else:
+            row['image_url']=None
+        return row
+
+    @app.get('/api/promotions/<int:promo_id>/image')
+    def promotion_image(promo_id):
+        with db() as conn:
+            row=conn.execute('SELECT image_data FROM promotions WHERE id=%s',(promo_id,)).fetchone()
+        if not row or not row['image_data']:
+            return jsonify(error='Chưa có ảnh quảng cáo'),404
+        return Response(base64.b64decode(row['image_data'].split(',',1)[1]),mimetype='image/jpeg')
+
     @app.get('/api/public/promotions')
     def public_listing():
         with db() as conn:
@@ -33,7 +53,22 @@ def register_promotions(app, db, roles, body, audit):
             query = 'SELECT * FROM promotions'
             if g.user['role'] != 'admin':
                 query += ' WHERE active AND expires_at>now()'
-            return jsonify(conn.execute(query + ' ORDER BY id DESC').fetchall())
+            return jsonify([with_image_url(row) for row in conn.execute(query + ' ORDER BY id DESC').fetchall()])
+
+    @app.get('/api/promotions/saved')
+    @roles('customer')
+    def saved():
+        with db() as conn:
+            return jsonify([with_image_url(row) for row in conn.execute("SELECT p.* FROM saved_promotions s JOIN promotions p ON p.id=s.promotion_id WHERE s.user_id=%s ORDER BY s.saved_at DESC",(g.user['id'],)).fetchall()])
+
+    @app.post('/api/promotions/<int:promotion_id>/save')
+    @roles('customer')
+    def save(promotion_id):
+        with db() as conn:
+            row=conn.execute('SELECT id FROM promotions WHERE id=%s AND active AND expires_at>now() FOR SHARE',(promotion_id,)).fetchone()
+            if not row:return jsonify(error='Mã không còn khả dụng'),404
+            conn.execute('INSERT INTO saved_promotions(user_id,promotion_id) VALUES (%s,%s) ON CONFLICT DO NOTHING',(g.user['id'],promotion_id))
+        return jsonify(status='saved')
 
     @app.post('/api/promotions/preview')
     @roles('customer')
@@ -67,6 +102,32 @@ def register_promotions(app, db, roles, body, audit):
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,now()+%s*interval '1 day') RETURNING *''', (code,title,kind,value,cap,minimum,limit,personal,days)).fetchone()
             audit(conn,'create','promotion',row['id'])
             return jsonify(row), 201
+
+    @app.post('/api/admin/promotions/<int:promo_id>/image')
+    @roles('admin')
+    def upload_image(promo_id):
+        upload=request.files.get('image')
+        if not upload:return jsonify(error='Chọn ảnh quảng cáo trước'),400
+        raw=upload.read(10*1024*1024+1)
+        if len(raw)>10*1024*1024:return jsonify(error='Ảnh quảng cáo tối đa 10 MB'),400
+        try:
+            with Image.open(io.BytesIO(raw)) as image:
+                if image.format not in ('JPEG','PNG','WEBP') or image.width*image.height>16000000:raise ValueError('image')
+                image.load();image=ImageOps.exif_transpose(image)
+                if image.mode in ('RGBA','LA') or 'transparency' in image.info:
+                    rgba=image.convert('RGBA');image=Image.new('RGB',rgba.size,'white');image.paste(rgba,mask=rgba.getchannel('A'))
+                else:
+                    image=image.convert('RGB')
+                image.thumbnail((1200,800))
+                output=io.BytesIO();image.save(output,format='JPEG',quality=85)
+        except (UnidentifiedImageError,ValueError,OSError,Image.DecompressionBombError):
+            return jsonify(error='Chọn ảnh JPG, PNG hoặc WebP hợp lệ'),400
+        uri='data:image/jpeg;base64,'+base64.b64encode(output.getvalue()).decode('ascii')
+        with db() as conn:
+            row=conn.execute('UPDATE promotions SET image_data=%s WHERE id=%s RETURNING id',(uri,promo_id)).fetchone()
+            if not row:return jsonify(error='Không tìm thấy mã'),404
+            audit(conn,'upload_image','promotion',promo_id)
+        return jsonify(status='ok',image_url=with_image_url({'id':promo_id,'image_data':uri})['image_url'])
 
     @app.patch('/api/admin/promotions/<int:promo_id>')
     @roles('admin')

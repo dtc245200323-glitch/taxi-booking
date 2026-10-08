@@ -15,7 +15,32 @@ const Admin = window.Admin = {
     $('#revenue-chart').innerHTML=this.daily.length?'<canvas id="revenue-canvas" width="1000" height="260" role="img" aria-label="Doanh thu theo ngày"></canvas><details><summary>Xem số liệu theo ngày</summary><table><thead><tr><th>Ngày</th><th>Chuyến</th><th>Doanh thu</th></tr></thead><tbody>'+this.daily.map(d=>`<tr><td>${new Date(d.day).toLocaleDateString('vi-VN')}</td><td>${d.trips}</td><td>${money(d.revenue)}</td></tr>`).join('')+'</tbody></table></details>':'<p class="hint">Chưa có dữ liệu báo cáo.</p>';
     this.drawChart();
   },
-  drawChart(){const canvas=$('#revenue-canvas');if(!canvas)return;const ctx=canvas.getContext('2d'), rows=this.daily;const max=Math.max(1,...rows.map(d=>Number(d.revenue)));const width=920/rows.length;ctx.clearRect(0,0,1000,260);ctx.font='12px Segoe UI';ctx.fillStyle='#62786c';ctx.fillText('VND',10,16);for(let i=0;i<4;i++){const y=210-i*60;ctx.strokeStyle='#e4eade';ctx.beginPath();ctx.moveTo(60,y);ctx.lineTo(990,y);ctx.stroke();ctx.fillText(Math.round(max*i/3).toLocaleString('vi-VN'),0,y-5);}rows.forEach((d,i)=>{const h=Number(d.revenue)/max*180;ctx.fillStyle='#18344d';ctx.fillRect(65+i*width,210-h,Math.max(3,width-8),h);if(i%Math.max(1,Math.ceil(rows.length/10))===0){ctx.fillStyle='#62786c';ctx.fillText(new Date(d.day).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'}),65+i*width,235);}});},
+  drawChart(){
+    const canvas=$('#revenue-canvas');if(!canvas)return;
+    const ctx=canvas.getContext('2d'),rows=this.daily;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(!rows.length)return;
+    ctx.font='12px Segoe UI';
+    const max=Math.max(1,...rows.map(d=>Number(d.revenue)))*1.2;
+    const ticks=Array.from({length:4},(_,i)=>Math.round(max*i/3).toLocaleString('vi-VN'));
+    const left=Math.max(75,...ticks.map(t=>ctx.measureText(t).width+16)),right=canvas.width-16;
+    const top=30,bottom=210,slot=(right-left)/rows.length,barWidth=Math.min(56,slot*.65);
+    ctx.fillStyle='#62786c';ctx.textAlign='right';ctx.fillText('VND',left-12,16);
+    ticks.forEach((label,i)=>{
+      const y=bottom-i*(bottom-top)/3;
+      ctx.strokeStyle='#e4eade';ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();
+      ctx.fillStyle='#62786c';ctx.fillText(label,left-12,y+4);
+    });
+    ctx.textAlign='center';
+    rows.forEach((d,i)=>{
+      const h=Number(d.revenue)/max*(bottom-top),x=left+(i+.5)*slot;
+      ctx.fillStyle='#18344d';ctx.fillRect(x-barWidth/2,bottom-h,barWidth,h);
+      if(rows.length<=10){ctx.fillText(Number(d.revenue).toLocaleString('vi-VN'),x,bottom-h-8);}
+      if(i%Math.max(1,Math.ceil(rows.length/10))===0){
+        ctx.fillStyle='#62786c';ctx.fillText(new Date(d.day).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'}),x,235);
+      }
+    });
+  },
   renderProfiles(){for(const [kind,rows] of [['customer',this.customers],['driver',this.drivers]]){
     const search=$('#'+kind+'-search').value.toLocaleLowerCase('vi');
     $('#'+kind+'-list').innerHTML=rows.filter(r=>[r.name,r.phone,r.plate,r.username].some(v=>String(v||'').toLocaleLowerCase('vi').includes(search))).map(r=>`<li><div class="profile-heading"><b>${escape(r.name)}${r.plate?' · '+escape(r.plate):''}</b><span class="badge ${r.archived?'cancelled':''}">${r.archived?'Đã lưu trữ':kind==='driver'?({available:'Sẵn sàng',busy:'Đang bận',offline:'Đang nghỉ'}[r.status]):'Đang hoạt động'}</span></div>${r.account_active===false?'<span class="badge cancelled">Tài khoản khóa</span>':''}<div class="row-actions"><button class="secondary" data-profile="${kind}" data-edit="${r.id}">Sửa</button><button class="secondary" data-profile="${kind}" data-history="${r.id}">Xem chuyến</button><button class="secondary" data-profile="${kind}" data-archive="${r.id}" data-restore="${r.archived}">${r.archived?'Khôi phục':'Lưu trữ'}</button></div></li>`).join('')||'<li>Không có hồ sơ phù hợp.</li>';

@@ -9,10 +9,12 @@ Quên mật khẩu: dùng email đã lưu trong hồ sơ; nếu không nhận th
 Lỗi bản đồ/GPS: kiểm tra mạng, quyền vị trí trình duyệt; có thể tìm địa chỉ hoặc chọn điểm thủ công. Tài xế bật chia sẻ GPS để khách chuyến đang phục vụ theo dõi.
 Tài xế bật sẵn sàng, vào Danh sách chuyến, chỉ nhận một chuyến phù hợp phương tiện; bắt đầu và hoàn thành đúng trạng thái. Giấy phép/phương tiện gửi admin duyệt trong Hồ sơ.
 Khách hủy chuyến khi chờ tài xế, xem Lịch sử chuyến và gửi phản ánh trong chi tiết chuyến.
-Không có quyền xem dữ liệu chuyến, xác nhận thanh toán, đặt/hủy xe hay sửa tài khoản. Không giả vờ đã thực hiện hành động. Không bịa giá/mã/địa chỉ liên hệ. Hỏi thêm mã lỗi/trạng thái nếu thiếu thông tin, tránh yêu cầu dữ liệu nhạy cảm."""
+Không có quyền xem dữ liệu chuyến, xác nhận thanh toán, đặt/hủy xe hay sửa tài khoản. Không giả vờ đã thực hiện hành động. Không bịa giá/mã/địa chỉ liên hệ. Nếu khách cần người hỗ trợ hoặc liên hệ Admin, hướng dẫn gọi 0325907434. Hỏi thêm mã lỗi/trạng thái nếu thiếu thông tin, tránh yêu cầu dữ liệu nhạy cảm."""
 
 def basic(message):
     text=''.join(c for c in unicodedata.normalize('NFD',message.lower()) if unicodedata.category(c)!='Mn').replace('đ','d')
+    if any(w in text for w in ['lien he','admin','nguoi that','ho tro truc tiep','so dien thoai']):
+        return 'Bạn có thể liên hệ chúng tôi qua số 0325907434. Bấm nút Liên hệ trong khung chat để gọi trực tiếp. Khi trao đổi, chuẩn bị mã chuyến hoặc nội dung lỗi; không cung cấp mật khẩu hay OTP.'
     if any(w in text for w in ['chuyen khoan','thanh toan','qr']):
         return 'Mở Thanh toán của chuyến, kiểm tra QR, số tiền và nội dung rồi chuyển trong ứng dụng ngân hàng. Bấm “Tôi đã chuyển khoản”. Admin cần đối soát trước khi trạng thái thành công. Nếu đang chờ hoặc thất bại, giữ biên nhận và gửi phản ánh; đừng chuyển lại ngay.'
     if any(w in text for w in ['mat khau','dang nhap','email']):

@@ -2,6 +2,7 @@ name: ${COMPOSE_PROJECT_NAME:-baikiemtra}
 services:
   db:
     image: postgres:16-alpine
+    ports: ['127.0.0.1:5432:5432']
     environment:
       POSTGRES_DB: taxi
       POSTGRES_USER: taxi
@@ -15,7 +16,7 @@ services:
       timeout: 3s
       retries: 15
     restart: unless-stopped
-    networks: [backend]
+    networks: [backend, db-client]
   migrate:
     build: .
     command: [python, migrate.py]
@@ -183,6 +184,7 @@ services:
     restart: unless-stopped
     networks: [monitoring]
 networks:
+  db-client:
   edge:
   backend:
     internal: true
