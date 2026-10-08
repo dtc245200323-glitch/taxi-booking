@@ -26,7 +26,7 @@ Trong pgAdmin: Add New Server → tên `Taxi DB` → Connection: Host `db`, Port
 
 ## Tài khoản và phân quyền
 
-| Vai trò | Tên đăng nhập demo | Mật khẩu trong `.env` | Quyền |
+| Vai trò | Tên đăng nhập  | Mật khẩu trong `.env` | Quyền |
 |---|---|---|---|
 | Admin | `admin` (hoặc `ADMIN_USERNAME`) | `ADMIN_PASSWORD` | Xem tất cả chuyến/thống kê, tạo khách và tài xế kèm tài khoản, đặt chuyến, phân công và cập nhật trạng thái |
 | Tài xế | `taixe` | `DRIVER_PASSWORD` | Bật/tắt nhận chuyến, xem hàng chờ đúng loại xe, nhận chuyến, báo đã đến/bắt đầu/hoàn thành; hồ sơ và thu nhập riêng |
@@ -198,7 +198,7 @@ Chưa tự tạo/push repository vì dự án chưa có URL repository đích.
 Xe máy và ưu đãi: [hướng dẫn](docs/XE_MAY_VA_UU_DAI.md).
 
 
-## Đối chiếu yêu cầu học phần và demo
+## Đối chiếu yêu cầu học phần 
 
 Xem [hướng dẫn nộp bài/demo](docs/NOP_BAI_VA_DEMO.md), [báo cáo Word](docs/BAO_CAO_TAXI_BOOKING.docx), [báo cáo PDF](docs/BAO_CAO_TAXI_BOOKING.pdf) và [bản Markdown](docs/BAO_CAO.md).
 
