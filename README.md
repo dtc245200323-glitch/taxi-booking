@@ -1,4 +1,4 @@
-# Đề 22 — Hệ thống Đặt xe / Taxi Booking
+#  Hệ thống Đặt xe / Taxi Booking
 
 Ứng dụng Taxi Booking với ba giao diện khách, tài xế và admin theo ảnh minh họa, Flask + PostgreSQL và Docker Compose. Có Nginx reverse proxy, pgAdmin, Prometheus, Grafana, Loki và Promtail thu thập log (Alloy là profile thay thế). GitHub Actions kiểm tra luồng nghiệp vụ khi push/PR. Xem [bảng đối chiếu chức năng theo tài liệu](docs/DOI_CHIEU_CHUC_NANG.md).
 
