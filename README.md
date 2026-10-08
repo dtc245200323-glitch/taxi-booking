@@ -64,7 +64,7 @@ Các chức năng sửa hồ sơ, tài khoản, báo cáo, export và audit đ�
 
 `GET /api/trips` nhận `q`, `status`, `customer_id`, `driver_id`, `from`, `to`, `page`, `limit` (1–500); `stats`, `reports`, `export` nhận cùng bộ lọc nghiệp vụ. Giữ toàn bộ lịch sử chuyến, không có API xóa chuyến đã hoàn thành.
 
-## Demo để trình bày
+ trình bày
 
 1. Mở ứng dụng, đăng nhập tài khoản `admin`.
 2. Thêm khách hàng và tài xế, hoặc dùng dữ liệu mẫu.
